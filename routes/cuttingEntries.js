@@ -28,15 +28,13 @@ async function getRecentCuttings(client) {
 // GET /cutting-entry
 router.get('/', async (req, res) => {
   try {
-    const [products, evalShelves, recent] = await Promise.all([
-      pool.query("SELECT id, product_code, name FROM products WHERE is_active=TRUE ORDER BY product_code"),
+    const [evalShelves, recent] = await Promise.all([
       pool.query("SELECT id, shelf_code FROM shelves WHERE shelf_type='evaluation' AND is_active=TRUE ORDER BY shelf_code"),
       getRecentCuttings(pool),
     ]);
     res.render('cutting-entry', {
       title: 'Kesim / Sarf Girişi',
       user: req.session,
-      products: products.rows,
       evalShelves: evalShelves.rows,
       recent,
       success: req.query.success || null,
@@ -57,15 +55,13 @@ router.post('/', async (req, res) => {
   } = req.body;
 
   const loadForm = async (error) => {
-    const [products, evalShelves, recent] = await Promise.all([
-      pool.query("SELECT id, product_code, name FROM products WHERE is_active=TRUE ORDER BY product_code"),
+    const [evalShelves, recent] = await Promise.all([
       pool.query("SELECT id, shelf_code FROM shelves WHERE shelf_type='evaluation' AND is_active=TRUE ORDER BY shelf_code"),
       getRecentCuttings(pool),
     ]);
     return res.render('cutting-entry', {
       title: 'Kesim / Sarf Girişi',
       user: req.session,
-      products: products.rows,
       evalShelves: evalShelves.rows,
       recent,
       success: null,
@@ -88,8 +84,7 @@ router.post('/', async (req, res) => {
   }
 
   const totalMeter = calcTotalMeter(cm, qty);
-  const rawLot     = lot_barcode.trim();
-  const cleanLot   = rawLot.includes('||') ? rawLot.split('||')[0].trim() : rawLot;
+  const cleanLot   = lot_barcode.trim();
   const cleanCode  = product_code.trim().toUpperCase();
 
   const client = await pool.connect();

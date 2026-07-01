@@ -20,59 +20,33 @@
 <div class="card">
   <form action="/cutting-entry" method="POST" id="cutForm">
 
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" for="entry_date">Tarih <span class="req">*</span></label>
-        <input type="date" id="entry_date" name="entry_date" required
-               value="<%= formData.entry_date || new Date().toISOString().split('T')[0] %>">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="output_type">Çıkış Tipi <span class="req">*</span></label>
-        <select id="output_type" name="output_type" required>
-          <option value="">— Seç —</option>
-          <option value="sales"      <%=formData.output_type==='sales'      ?'selected':''%>>&#128200; Satış</option>
-          <option value="fire"       <%=formData.output_type==='fire'       ?'selected':''%>>&#128293; Fire</option>
-          <option value="evaluation" <%=formData.output_type==='evaluation' ?'selected':''%>>&#128195; Değerlendirme</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- ÜRÜN KODU -->
+    <!-- LOT / BARKOD -->
     <div class="form-group">
-      <label class="form-label" for="product_code">Ürün Kodu <span class="req">*</span></label>
-      <input type="text" id="product_code" name="product_code"
-             list="product-list" required
-             placeholder="Ürün kodu yazın veya seçin..."
-             value="<%= formData.product_code || '' %>"
+      <label class="form-label" for="lot_barcode">Lot / Barkod <span class="req">*</span></label>
+      <input type="text" id="lot_barcode" name="lot_barcode" required
+             autofocus
+             placeholder="Jalpersan barkodunu okutun veya yazın"
+             value="<%= formData.lot_barcode || '' %>"
              autocomplete="off"
              inputmode="text"
-             style="text-transform:uppercase;font-size:1.1rem;font-weight:700">
-      <datalist id="product-list">
-        <% products.forEach(p => { %>
-        <option value="<%= p.product_code %>"><%= p.name ? p.product_code + ' — ' + p.name : p.product_code %></option>
-        <% }) %>
-      </datalist>
-      <div class="form-hint" id="productHint"></div>
+             style="font-size:1.05rem;font-family:monospace">
+      <div class="form-hint" id="lotHint">Lot barkodunu girin, ürün kodu ve raf otomatik dolacak.</div>
     </div>
 
-    <!-- LOT / KAYNAK RAF -->
+    <!-- ÜRÜN KODU / KAYNAK RAF (otomatik doldurulur) -->
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="lot_barcode">Lot / Barkod <span class="req">*</span></label>
-        <select id="lot_barcode" name="lot_barcode" required disabled>
-          <option value="">— Önce ürün kodu girin —</option>
-          <% if(formData.lot_barcode){%>
-          <option value="<%= formData.lot_barcode %>" selected><%= formData.lot_barcode %></option>
-          <%}%>
-        </select>
-        <div class="form-hint" id="lotHint">Ürün kodu girilince stokta kalan lotlar görünür.</div>
+        <label class="form-label" for="product_code">Ürün Kodu</label>
+        <input type="text" id="product_code" name="product_code" readonly required
+               placeholder="— Lot girilince dolar —"
+               value="<%= formData.product_code || '' %>"
+               style="font-size:1.1rem;font-weight:700;background:#f3f4f6">
       </div>
 
       <div class="form-group">
         <label class="form-label" for="source_shelf_id">Kaynak Raf <span class="req">*</span></label>
         <select id="source_shelf_id" name="source_shelf_id" required disabled>
-          <option value="">— Lot seçilince dolar —</option>
+          <option value="">— Lot girilince dolar —</option>
         </select>
         <div class="form-hint" id="shelfTypeHint" style="display:none"></div>
       </div>
@@ -82,6 +56,25 @@
     <div class="form-group" id="remainingGroup" style="display:none">
       <label class="form-label">Kalan Stok</label>
       <div class="stock-info-box" id="remainingBox">—</div>
+    </div>
+
+    <!-- ÇIKIŞ TİPİ / TARİH -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="output_type">Çıkış Tipi <span class="req">*</span></label>
+        <select id="output_type" name="output_type" required>
+          <option value="">— Seç —</option>
+          <option value="sales"      <%=formData.output_type==='sales'      ?'selected':''%>>&#128200; Satış</option>
+          <option value="fire"       <%=formData.output_type==='fire'       ?'selected':''%>>&#128293; Fire</option>
+          <option value="evaluation" <%=formData.output_type==='evaluation' ?'selected':''%>>&#128195; Değerlendirme</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="entry_date">Tarih <span class="req">*</span></label>
+        <input type="date" id="entry_date" name="entry_date" required
+               value="<%= formData.entry_date || new Date().toISOString().split('T')[0] %>">
+      </div>
     </div>
 
     <!-- KESİM BİLGİLERİ -->
@@ -180,8 +173,8 @@
 <% } %>
 
 <script>
+const lotInput     = document.getElementById('lot_barcode');
 const productInput = document.getElementById('product_code');
-const lotSel       = document.getElementById('lot_barcode');
 const shelfSel     = document.getElementById('source_shelf_id');
 const remainGrp    = document.getElementById('remainingGroup');
 const remainBox    = document.getElementById('remainingBox');
@@ -195,11 +188,10 @@ const targetInfo   = document.getElementById('targetInfo');
 const targetBox    = document.getElementById('targetInfoBox');
 const submitBtn    = document.getElementById('submitBtn');
 const lotHint      = document.getElementById('lotHint');
-const productHint  = document.getElementById('productHint');
 const shelfTypeHint = document.getElementById('shelfTypeHint');
 
 let currentRemaining = 0;
-let lotsData = [];
+let shelvesData = [];
 
 // ── Çıkış tipi değişince ──────────────────────────────────────
 outputSel.addEventListener('change', updateOutputType);
@@ -223,77 +215,70 @@ function updateOutputType() {
   updateSubmitState();
 }
 
-// ── Ürün kodu değişince lotları getir ─────────────────────────
-let productTimer = null;
-productInput.addEventListener('input', () => {
-  const pos = productInput.selectionStart;
-  productInput.value = productInput.value.toUpperCase();
-  productInput.setSelectionRange(pos, pos);
-  clearTimeout(productTimer);
-  productTimer = setTimeout(loadLots, 500);
+// ── Lot barkodu girilince ürün + raf otomatik gelir ────────────
+let lotTimer = null;
+lotInput.addEventListener('input', () => {
+  clearTimeout(lotTimer);
+  lotTimer = setTimeout(lookupLot, 500);
 });
-productInput.addEventListener('change', loadLots);
+lotInput.addEventListener('blur', lookupLot);
 
-async function loadLots() {
-  const code = productInput.value.trim();
-  if (!code) { resetLotShelf(); return; }
-  lotSel.disabled = true;
-  lotSel.innerHTML = '<option value="">Yükleniyor... &#9203;</option>';
-  shelfSel.innerHTML = '<option value="">—</option>';
+async function lookupLot() {
+  const lot = lotInput.value.trim();
+  if (!lot) { resetProductShelf(); return; }
   shelfSel.disabled = true;
+  shelfSel.innerHTML = '<option value="">Yükleniyor... &#9203;</option>';
   resetRemaining();
   try {
-    const res = await fetch('/api/lots?product_code=' + encodeURIComponent(code));
-    lotsData = await res.json();
-    if (!lotsData.length) {
-      lotSel.innerHTML = '<option value="">Bu üründe stok bulunamadı</option>';
-      lotHint.textContent = 'Stokta bu ürün kodu yok. Önce rulo girişi yapın.';
+    const res  = await fetch('/api/lot-lookup?lot_barcode=' + encodeURIComponent(lot));
+    const data = await res.json();
+    if (data.status !== 'ok') {
+      productInput.value = '';
+      shelfSel.innerHTML = '<option value="">Bu lot barkodu bulunamadı</option>';
+      lotHint.textContent = 'Bu lot barkodu stokta yok. Önce rulo girişi yapın.';
       lotHint.style.color = '#b91c1c';
       updateSubmitState();
       return;
     }
-    lotSel.innerHTML = '<option value="">— Lot Seç —</option>';
-    lotsData.forEach(l => {
+    productInput.value = data.product_code;
+    shelvesData = data.shelves;
+    shelfSel.innerHTML = '<option value="">— Raf Seç —</option>';
+    shelvesData.forEach(s => {
       const opt = document.createElement('option');
-      opt.value = l.lot_barcode + '||' + l.shelf_id;
-      opt.dataset.lot = l.lot_barcode;
-      opt.dataset.shelfId = l.shelf_id;
-      opt.dataset.shelfCode = l.shelf_code;
-      opt.dataset.shelfType = l.shelf_type || 'main';
-      opt.dataset.remaining = l.remaining_meter;
-      const typeLabel = l.shelf_type === 'evaluation' ? ' [DEĞ.RAF]' : '';
-      opt.textContent = `${l.lot_barcode} — ${l.shelf_code}${typeLabel} (kalan: ${Number(l.remaining_meter).toFixed(2)} m)`;
-      lotSel.appendChild(opt);
+      opt.value = s.shelf_id;
+      opt.dataset.shelfType = s.shelf_type || 'main';
+      opt.dataset.remaining = s.remaining_meter;
+      const typeLabel = s.shelf_type === 'evaluation' ? ' [DEĞ.RAF]' : '';
+      opt.textContent = `${s.shelf_code}${typeLabel} (kalan: ${Number(s.remaining_meter).toFixed(2)} m)`;
+      shelfSel.appendChild(opt);
     });
-    lotSel.disabled = false;
-    lotHint.textContent = lotsData.length + ' lot/raf kombinasyonu bulundu.';
+    shelfSel.disabled = false;
+    lotHint.textContent = shelvesData.length + ' rafta stok bulundu.';
     lotHint.style.color = '';
-    productHint.textContent = '';
-  } catch(e) {
-    lotSel.innerHTML = '<option value="">Hata oluştu</option>';
+    if (shelvesData.length === 1) {
+      shelfSel.selectedIndex = 1;
+      shelfSel.dispatchEvent(new Event('change'));
+    }
+  } catch (e) {
+    shelfSel.innerHTML = '<option value="">Hata oluştu</option>';
   }
+  updateSubmitState();
 }
 
-// ── Lot seçilince raf ve kalan ────────────────────────────────
-lotSel.addEventListener('change', () => {
-  const opt = lotSel.options[lotSel.selectedIndex];
-  if (!opt || !opt.dataset.lot) {
+// ── Raf seçilince kalan stok ve tip bilgisi ────────────────────
+shelfSel.addEventListener('change', () => {
+  const opt = shelfSel.options[shelfSel.selectedIndex];
+  if (!opt || !opt.value) {
     resetRemaining();
-    shelfSel.innerHTML = '<option value="">—</option>';
-    shelfSel.disabled = true;
     shelfTypeHint.style.display = 'none';
     updateSubmitState();
     return;
   }
-  lotSel.setAttribute('data-selected-lot', opt.dataset.lot);
-  shelfSel.innerHTML = `<option value="${opt.dataset.shelfId}">${opt.dataset.shelfCode}</option>`;
-  shelfSel.disabled = false;
   currentRemaining = parseFloat(opt.dataset.remaining) || 0;
   updateRemainingBox(currentRemaining);
   remainGrp.style.display = 'block';
 
   if (opt.dataset.shelfType === 'evaluation') {
-    shelfTypeHint.textContent = '&#128195; Değerlendirme rafından kesim — parça "kullanıldı" olarak işaretlenecek.';
     shelfTypeHint.innerHTML = '&#128195; Değerlendirme rafından kesim — parça "kullanıldı" olarak işaretlenecek.';
     shelfTypeHint.style.display = 'block';
     shelfTypeHint.style.color = '#92400e';
@@ -303,28 +288,15 @@ lotSel.addEventListener('change', () => {
   recalcAndCheck();
 });
 
-// Form submit: lot_barcode ve source_shelf_id'yi düzelt
-document.getElementById('cutForm').addEventListener('submit', (e) => {
-  const opt = lotSel.options[lotSel.selectedIndex];
-  if (opt && opt.dataset.lot) {
-    let hidLot = document.getElementById('_hidden_lot');
-    if (!hidLot) {
-      hidLot = document.createElement('input');
-      hidLot.type = 'hidden'; hidLot.name = 'lot_barcode'; hidLot.id = '_hidden_lot';
-      document.getElementById('cutForm').appendChild(hidLot);
-      lotSel.removeAttribute('name');
-    }
-    hidLot.value = opt.dataset.lot;
-  }
-});
-
-function resetLotShelf() {
-  lotSel.innerHTML = '<option value="">— Önce ürün kodu girin —</option>';
-  lotSel.disabled = true;
-  shelfSel.innerHTML = '<option value="">—</option>';
+function resetProductShelf() {
+  productInput.value = '';
+  shelfSel.innerHTML = '<option value="">— Lot girilince dolar —</option>';
   shelfSel.disabled = true;
   shelfTypeHint.style.display = 'none';
+  lotHint.textContent = 'Lot barkodunu girin, ürün kodu ve raf otomatik dolacak.';
+  lotHint.style.color = '';
   resetRemaining();
+  updateSubmitState();
 }
 
 function resetRemaining() {
@@ -364,7 +336,7 @@ function recalcAndCheck() {
 
 function updateSubmitState() {
   const hasProduct = productInput.value.trim();
-  const hasLot     = lotSel.value;
+  const hasLot     = lotInput.value.trim();
   const hasShelf   = shelfSel.value;
   const hasCm      = parseFloat(cutCmInput.value) > 0;
   const hasQty     = parseInt(qtyInput.value,10)  > 0;
@@ -387,7 +359,7 @@ function updateSubmitState() {
 evalSh.addEventListener('change', updateSubmitState);
 
 outputSel.dispatchEvent(new Event('change'));
-if (productInput.value) loadLots();
+if (lotInput.value) lookupLot();
 </script>
 
 <%- include('_footer') %>

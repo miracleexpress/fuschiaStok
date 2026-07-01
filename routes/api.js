@@ -21,6 +21,41 @@ router.get('/lots', async (req, res) => {
   }
 });
 
+// GET /api/lot-lookup?lot_barcode=JAL-001
+// Lot barkoduna göre ürün kodu + stokta kalan raf kombinasyonları
+// Yanıt: { status: 'ok', product_code, shelves: [...] } veya { status: 'not_found' }
+router.get('/lot-lookup', async (req, res) => {
+  const { lot_barcode } = req.query;
+  if (!lot_barcode) return res.json({ status: 'not_found' });
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         p.product_code,
+         sh.id              AS shelf_id,
+         sh.shelf_code,
+         sh.shelf_type,
+         SUM(sm.meter)::NUMERIC(12,2) AS remaining_meter
+       FROM stock_movements sm
+       JOIN products p  ON p.id  = sm.product_id
+       JOIN shelves  sh ON sh.id = CASE
+         WHEN sm.movement_type IN ('roll_in','evaluation_in') THEN sm.target_shelf_id
+         ELSE sm.source_shelf_id
+       END
+       WHERE sm.lot_barcode = $1
+         AND sh.shelf_type IN ('main', 'evaluation')
+       GROUP BY p.product_code, sh.id, sh.shelf_code, sh.shelf_type
+       HAVING SUM(sm.meter) > 0
+       ORDER BY sh.shelf_code`,
+      [lot_barcode.trim()]
+    );
+    if (!rows.length) return res.json({ status: 'not_found' });
+    res.json({ status: 'ok', product_code: rows[0].product_code, shelves: rows });
+  } catch (err) {
+    console.error('/api/lot-lookup hatası:', err);
+    res.status(500).json({ error: 'Lot bilgisi alınamadı.' });
+  }
+});
+
 // GET /api/lot-stock?product_code=DT-04&lot_barcode=JAL-001
 // Belirli ürün + lot için raf bazlı kalan metre
 router.get('/lot-stock', async (req, res) => {
