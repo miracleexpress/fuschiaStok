@@ -30,26 +30,34 @@
              autocomplete="off"
              inputmode="text"
              style="font-size:1.05rem;font-family:monospace">
-      <div class="form-hint" id="lotHint">Lot barkodunu girin, ürün kodu ve raf otomatik dolacak.</div>
+      <div class="form-hint" id="lotHint">Lot barkodunu girin (ürün ve raf otomatik dolar) — ya da önce ürün kodunu yazıp mevcut lotlardan seçin.</div>
     </div>
 
-    <!-- ÜRÜN KODU / KAYNAK RAF (otomatik doldurulur) -->
+    <!-- ÜRÜN KODU / KAYNAK RAF -->
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="product_code">Ürün Kodu</label>
-        <input type="text" id="product_code" name="product_code" readonly required
-               placeholder="— Lot girilince dolar —"
+        <label class="form-label" for="product_code">Ürün Kodu <span class="req">*</span></label>
+        <input type="text" id="product_code" name="product_code" required
+               placeholder="Örn: DT-04 — lot girilince de otomatik dolar"
                value="<%= formData.product_code || '' %>"
-               style="font-size:1.1rem;font-weight:700;background:#f3f4f6">
+               autocomplete="off"
+               inputmode="text"
+               style="text-transform:uppercase;font-size:1.1rem;font-weight:700">
       </div>
 
       <div class="form-group">
         <label class="form-label" for="source_shelf_id">Kaynak Raf <span class="req">*</span></label>
         <select id="source_shelf_id" name="source_shelf_id" required disabled>
-          <option value="">— Lot girilince dolar —</option>
+          <option value="">— Lot veya ürün kodu girin —</option>
         </select>
         <div class="form-hint" id="shelfTypeHint" style="display:none"></div>
       </div>
+    </div>
+
+    <!-- ÜRÜN KODUNA GÖRE MEVCUT LOTLAR (yardımcı liste) -->
+    <div class="form-group" id="availableLotsGroup" style="display:none">
+      <label class="form-label">Bu Üründe Stokta Olan Lotlar <span class="fs-sm text-muted fw-bold">— birine tıklayın</span></label>
+      <div id="availableLotsList" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     </div>
 
     <!-- KALAN METRE -->
@@ -189,6 +197,8 @@ const targetBox    = document.getElementById('targetInfoBox');
 const submitBtn    = document.getElementById('submitBtn');
 const lotHint      = document.getElementById('lotHint');
 const shelfTypeHint = document.getElementById('shelfTypeHint');
+const availableLotsGroup = document.getElementById('availableLotsGroup');
+const availableLotsList  = document.getElementById('availableLotsList');
 
 let currentRemaining = 0;
 let shelvesData = [];
@@ -225,7 +235,7 @@ lotInput.addEventListener('blur', lookupLot);
 
 async function lookupLot() {
   const lot = lotInput.value.trim();
-  if (!lot) { resetProductShelf(); return; }
+  if (!lot) { resetShelfOnly(); return; }
   shelfSel.disabled = true;
   shelfSel.innerHTML = '<option value="">Yükleniyor... &#9203;</option>';
   resetRemaining();
@@ -233,8 +243,8 @@ async function lookupLot() {
     const res  = await fetch('/api/lot-lookup?lot_barcode=' + encodeURIComponent(lot));
     const data = await res.json();
     if (data.status !== 'ok') {
-      productInput.value = '';
       shelfSel.innerHTML = '<option value="">Bu lot barkodu bulunamadı</option>';
+      shelfSel.disabled = true;
       lotHint.textContent = 'Bu lot barkodu stokta yok. Önce rulo girişi yapın.';
       lotHint.style.color = '#b91c1c';
       updateSubmitState();
@@ -265,6 +275,62 @@ async function lookupLot() {
   updateSubmitState();
 }
 
+// ── Ürün kodu girilince o üründeki mevcut lot/raf listesi gösterilir ──
+let productTimer = null;
+productInput.addEventListener('input', () => {
+  const pos = productInput.selectionStart;
+  productInput.value = productInput.value.toUpperCase();
+  productInput.setSelectionRange(pos, pos);
+  clearTimeout(productTimer);
+  productTimer = setTimeout(lookupByProduct, 500);
+});
+productInput.addEventListener('change', lookupByProduct);
+
+async function lookupByProduct() {
+  const code = productInput.value.trim();
+  if (!code) { availableLotsGroup.style.display = 'none'; availableLotsList.innerHTML = ''; return; }
+  try {
+    const res  = await fetch('/api/lots?product_code=' + encodeURIComponent(code));
+    const rows = await res.json();
+    availableLotsList.innerHTML = '';
+    if (!rows.length) {
+      availableLotsList.innerHTML = '<span class="fs-sm text-muted">Bu üründe stokta lot bulunamadı.</span>';
+      availableLotsGroup.style.display = 'block';
+      return;
+    }
+    rows.forEach(row => {
+      const typeLabel = row.shelf_type === 'evaluation' ? ' [DEĞ.RAF]' : '';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-secondary btn-sm';
+      btn.textContent = `${row.lot_barcode} — ${row.shelf_code}${typeLabel} (${Number(row.remaining_meter).toFixed(2)} m)`;
+      btn.addEventListener('click', () => selectLotFromList(row));
+      availableLotsList.appendChild(btn);
+    });
+    availableLotsGroup.style.display = 'block';
+  } catch (e) {
+    availableLotsGroup.style.display = 'none';
+  }
+}
+
+function selectLotFromList(row) {
+  lotInput.value = row.lot_barcode;
+  const typeLabel = row.shelf_type === 'evaluation' ? ' [DEĞ.RAF]' : '';
+  shelfSel.innerHTML = '';
+  const opt = document.createElement('option');
+  opt.value = row.shelf_id;
+  opt.dataset.shelfType = row.shelf_type || 'main';
+  opt.dataset.remaining = row.remaining_meter;
+  opt.textContent = `${row.shelf_code}${typeLabel} (kalan: ${Number(row.remaining_meter).toFixed(2)} m)`;
+  opt.selected = true;
+  shelfSel.appendChild(opt);
+  shelfSel.disabled = false;
+  lotHint.textContent = 'Lot listeden seçildi.';
+  lotHint.style.color = '';
+  shelfSel.dispatchEvent(new Event('change'));
+  updateSubmitState();
+}
+
 // ── Raf seçilince kalan stok ve tip bilgisi ────────────────────
 shelfSel.addEventListener('change', () => {
   const opt = shelfSel.options[shelfSel.selectedIndex];
@@ -288,12 +354,11 @@ shelfSel.addEventListener('change', () => {
   recalcAndCheck();
 });
 
-function resetProductShelf() {
-  productInput.value = '';
-  shelfSel.innerHTML = '<option value="">— Lot girilince dolar —</option>';
+function resetShelfOnly() {
+  shelfSel.innerHTML = '<option value="">— Lot veya ürün kodu girin —</option>';
   shelfSel.disabled = true;
   shelfTypeHint.style.display = 'none';
-  lotHint.textContent = 'Lot barkodunu girin, ürün kodu ve raf otomatik dolacak.';
+  lotHint.textContent = 'Lot barkodunu girin (ürün ve raf otomatik dolar) — ya da önce ürün kodunu yazıp mevcut lotlardan seçin.';
   lotHint.style.color = '';
   resetRemaining();
   updateSubmitState();
@@ -360,6 +425,7 @@ evalSh.addEventListener('change', updateSubmitState);
 
 outputSel.dispatchEvent(new Event('change'));
 if (lotInput.value) lookupLot();
+if (productInput.value) lookupByProduct();
 </script>
 
 <%- include('_footer') %>
