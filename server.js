@@ -22,6 +22,9 @@ const apiRoutes          = require('./routes/api');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// Render gibi ters proxy arkasında HTTPS'i doğru algılamak için (secure cookie şart)
+app.set('trust proxy', 1);
+
 // ── View engine ────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
