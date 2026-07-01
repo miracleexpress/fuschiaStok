@@ -1,0 +1,98 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#128200; Satış Raporu</h1>
+</div>
+
+<div class="filter-bar">
+  <form method="GET" action="/reports/sales">
+    <div class="form-group">
+      <label class="form-label">Başlangıç</label>
+      <input type="date" name="date_from" value="<%= filter.date_from||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Bitiş</label>
+      <input type="date" name="date_to" value="<%= filter.date_to||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ürün Kodu</label>
+      <input type="text" name="product_code" placeholder="DT-04" value="<%= filter.product_code||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lot / Barkod</label>
+      <input type="text" name="lot_barcode" placeholder="JAL-..." value="<%= filter.lot_barcode||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kullanıcı</label>
+      <select name="username">
+        <option value="">Tümü</option>
+        <% users.forEach(u => { %>
+        <option value="<%= u.username %>" <%=filter.username===u.username?'selected':''%>><%= u.username %></option>
+        <% }) %>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Filtrele</button>
+    <a href="/reports/sales" class="btn btn-secondary">Temizle</a>
+    <a href="/reports/satis.csv?<%= new URLSearchParams(filter).toString() %>"
+       class="btn btn-secondary" style="color:#059669">&#8595; CSV</a>
+  </form>
+</div>
+
+<% if (rows.length) { %>
+<div class="stat-grid mb-3">
+  <div class="stat-card warning">
+    <span class="stat-value"><%= Number(totals.total_meter||0).toFixed(2) %></span>
+    <span class="stat-label">Toplam Satış (m)</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value"><%= totals.total_qty||0 %></span>
+    <span class="stat-label">Toplam Adet</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value"><%= rows.length %></span>
+    <span class="stat-label">Kayıt Sayısı</span>
+  </div>
+</div>
+<% } %>
+
+<div class="card">
+  <% if (!rows.length) { %>
+  <div class="empty-state"><span class="es-icon">&#128200;</span>Satış kaydı bulunamadı.</div>
+  <% } else { %>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th><th>Ürün</th><th>Lot</th><th>Kaynak Raf</th>
+          <th>Kesim cm</th><th>Adet</th><th>Toplam (m)</th>
+          <th>Kaydeden</th><th>Not</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% let gt=0; rows.forEach(r => { gt+=parseFloat(r.total_meter||0); %>
+        <tr>
+          <td data-label="Tarih"><%= new Date(r.entry_date).toLocaleDateString('tr-TR') %></td>
+          <td data-label="Ürün" class="fw-bold"><%= r.product_code %></td>
+          <td data-label="Lot"  style="font-family:monospace;font-size:.85rem"><%= r.lot_barcode %></td>
+          <td data-label="Kaynak"><span class="badge badge-gray"><%= r.source_shelf %></span></td>
+          <td data-label="Kesim cm"><%= r.cut_cm %></td>
+          <td data-label="Adet"><%= r.quantity %></td>
+          <td data-label="Toplam (m)" class="fw-bold text-warning"><%= Number(r.total_meter).toFixed(2) %></td>
+          <td data-label="Kaydeden" class="fs-sm text-muted"><%= r.created_by %></td>
+          <td data-label="Not"        class="fs-sm text-muted"><%= r.note||'—' %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr class="tfoot-total">
+          <td colspan="6">TOPLAM</td>
+          <td class="text-warning"><%= gt.toFixed(2) %></td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<%- include('_footer') %>

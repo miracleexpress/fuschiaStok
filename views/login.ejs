@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Giriş — Fuschia Stok</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>Fuschia Stok</h1>
+      <p>Etullen Perde Depo Yönetimi</p>
+    </div>
+
+    <% if (error) { %>
+    <div class="alert alert-danger">
+      <span class="alert-icon">&#9888;</span>
+      <span><%= error %></span>
+    </div>
+    <% } %>
+
+    <form action="/login" method="POST" autocomplete="on">
+      <div class="form-group">
+        <label class="form-label" for="username">Kullanıcı Adı <span class="req">*</span></label>
+        <input type="text" id="username" name="username"
+               required autofocus autocomplete="username"
+               placeholder="Kullanıcı adınız">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Şifre <span class="req">*</span></label>
+        <input type="password" id="password" name="password"
+               required autocomplete="current-password"
+               placeholder="Şifreniz">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-xl mt-2">
+        Giriş Yap &#8594;
+      </button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

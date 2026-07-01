@@ -1,0 +1,95 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#128100; Kullanıcı Yönetimi</h1>
+</div>
+
+<% if (success) { %>
+<div class="alert alert-success"><span class="alert-icon">&#10003;</span> İşlem başarıyla tamamlandı.</div>
+<% } %>
+<% if (error) { %>
+<div class="alert alert-danger"><span class="alert-icon">&#9888;</span> <%= error %></div>
+<% } %>
+
+<!-- YENİ KULLANICI -->
+<div class="card mb-3">
+  <div class="card-title">Yeni Kullanıcı Ekle</div>
+  <form action="/users" method="POST" autocomplete="off">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Kullanıcı Adı <span class="req">*</span></label>
+        <input type="text" name="username" required placeholder="depo2" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Şifre <span class="req">*</span> <span class="fs-sm text-muted">(min. 6 karakter)</span></label>
+        <input type="password" name="password" required placeholder="••••••" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rol <span class="req">*</span></label>
+        <select name="role" required>
+          <option value="depo">&#128230; Depo</option>
+          <option value="admin">&#128100; Admin</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">+ Kullanıcı Ekle</button>
+  </form>
+</div>
+
+<!-- KULLANICI LİSTESİ -->
+<div class="card">
+  <div class="card-title">Kullanıcılar (<%= users.length %>)</div>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Kullanıcı</th><th>Rol</th><th>Durum</th>
+          <th>Kayıt</th><th>Şifre Değiştir</th><th>Durum Toggle</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => { %>
+        <tr>
+          <td data-label="#" class="fs-sm text-muted"><%= u.id %></td>
+          <td data-label="Kullanıcı" class="fw-bold fs-lg"><%= u.username %></td>
+          <td data-label="Rol">
+            <span class="badge <%=u.role==='admin'?'badge-blue':'badge-gray'%>">
+              <%=u.role==='admin'?'Yönetici':'Depo'%>
+            </span>
+          </td>
+          <td data-label="Durum">
+            <span class="badge <%=u.is_active?'badge-green':'badge-red'%>">
+              <%=u.is_active?'Aktif':'Pasif'%>
+            </span>
+          </td>
+          <td data-label="Kayıt" class="fs-sm text-muted">
+            <%= new Date(u.created_at).toLocaleDateString('tr-TR') %>
+          </td>
+          <td data-label="Şifre Değiştir">
+            <form action="/users/<%= u.id %>/password" method="POST"
+                  style="display:flex;gap:6px;align-items:center">
+              <input type="password" name="password" required
+                     placeholder="Yeni şifre" autocomplete="new-password"
+                     style="min-height:36px;padding:6px 10px;font-size:.88rem;flex:1;min-width:120px">
+              <button type="submit" class="btn btn-warning btn-sm">&#10003;</button>
+            </form>
+          </td>
+          <td data-label="İşlem">
+            <% if (u.id !== user.userId) { %>
+            <form action="/users/<%= u.id %>/toggle" method="POST" style="display:inline">
+              <button type="submit" class="btn btn-secondary btn-sm">
+                <%=u.is_active?'Pasifleştir':'Aktifleştir'%>
+              </button>
+            </form>
+            <% } else { %>
+            <span class="fs-sm text-muted">Mevcut oturum</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('_footer') %>

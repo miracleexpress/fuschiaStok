@@ -1,0 +1,39 @@
+</main>
+
+<!-- MOBILE BOTTOM ACTION BAR -->
+<nav class="bottom-bar">
+  <a href="/roll-entry"    class="<%- locals.title==='Rulo Girişi'         ? 'active':'' %>">
+    <span class="bb-icon">&#8679;</span>Giriş
+  </a>
+  <a href="/cutting-entry" class="<%- locals.title==='Kesim / Sarf Girişi' ? 'active':'' %>">
+    <span class="bb-icon">&#9986;</span>Kesim
+  </a>
+  <a href="/reports/roll-stock" class="<%- locals.title==='Rulo Stok' ? 'active':'' %>">
+    <span class="bb-icon">&#128230;</span>Stok
+  </a>
+  <a href="/reports/movements" class="<%- locals.title==='Stok Hareketleri' ? 'active':'' %>">
+    <span class="bb-icon">&#128257;</span>Hareketler
+  </a>
+  <a href="/" class="<%- locals.title==='Dashboard' ? 'active':'' %>">
+    <span class="bb-icon">&#9632;</span>Ana
+  </a>
+</nav>
+
+<script>
+(function(){
+  const hamburger = document.getElementById('hamburger');
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('overlay');
+
+  function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow=''; }
+
+  hamburger.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+  overlay.addEventListener('click', closeSidebar);
+
+  // Nav linklerine tıklanınca sidebar kapat (mobil)
+  sidebar.querySelectorAll('.nav-link').forEach(a => a.addEventListener('click', closeSidebar));
+})();
+</script>
+</body>
+</html>

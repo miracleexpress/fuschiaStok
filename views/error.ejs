@@ -1,0 +1,20 @@
+<%- include('_header') %>
+
+<div style="display:flex;align-items:center;justify-content:center;
+            min-height:60vh;padding:20px">
+  <div style="text-align:center;max-width:400px">
+    <div style="font-size:3.5rem;margin-bottom:14px">&#9888;</div>
+    <h1 style="font-size:1.5rem;font-weight:900;margin-bottom:10px;color:#111827">
+      <%= title %>
+    </h1>
+    <p style="color:#6b7280;font-size:1rem;margin-bottom:24px;line-height:1.6">
+      <%= message %>
+    </p>
+    <div class="btn-group" style="justify-content:center">
+      <a href="/" class="btn btn-primary">&#9632; Dashboard</a>
+      <a href="javascript:history.back()" class="btn btn-secondary">&#8592; Geri Git</a>
+    </div>
+  </div>
+</div>
+
+<%- include('_footer') %>

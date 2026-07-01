@@ -1,0 +1,93 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#127981; Ürün Yönetimi</h1>
+</div>
+
+<% if (success) { %>
+<div class="alert alert-success"><span class="alert-icon">&#10003;</span> İşlem başarıyla tamamlandı.</div>
+<% } %>
+<% if (error) { %>
+<div class="alert alert-danger"><span class="alert-icon">&#9888;</span> <%= error %></div>
+<% } %>
+
+<!-- YENİ ÜRÜN -->
+<div class="card mb-3">
+  <div class="card-title">Yeni Ürün Ekle</div>
+  <form action="/products" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Ürün Kodu <span class="req">*</span></label>
+        <input type="text" name="product_code" required placeholder="DT-04"
+               style="text-transform:uppercase;font-weight:700">
+        <div class="form-hint">Benzersiz, büyük harf (örn: DT-04)</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Desen Kodu</label>
+        <input type="text" name="pattern_code" placeholder="DT">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Varyant Kodu</label>
+        <input type="text" name="variant_code" placeholder="04">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ürün Adı</label>
+        <input type="text" name="name" placeholder="İsteğe bağlı açıklama">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">+ Ürün Ekle</button>
+  </form>
+</div>
+
+<!-- ÜRÜN LİSTESİ -->
+<div class="card">
+  <div class="card-title">Ürün Listesi (<%= products.length %>)</div>
+  <% if (!products.length) { %>
+  <div class="empty-state"><span class="es-icon">&#127981;</span>Ürün bulunamadı.</div>
+  <% } else { %>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Ürün Kodu</th><th>Desen</th><th>Varyant</th>
+          <th>Adı</th><th>Durum</th><th>İşlemler</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% products.forEach(p => { %>
+        <tr>
+          <td data-label="#" class="fs-sm text-muted"><%= p.id %></td>
+          <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= p.product_code %></td>
+          <td data-label="Desen"><%= p.pattern_code||'—' %></td>
+          <td data-label="Varyant"><%= p.variant_code||'—' %></td>
+          <td data-label="Adı">
+            <!-- Satır içi ad güncelleme formu -->
+            <form action="/products/<%= p.id %>/name" method="POST"
+                  style="display:flex;gap:6px;align-items:center">
+              <input type="text" name="name" value="<%= p.name||'' %>"
+                     placeholder="Ad girin..."
+                     style="min-height:36px;padding:6px 10px;font-size:.88rem;flex:1">
+              <button type="submit" class="btn btn-secondary btn-sm">&#10003;</button>
+            </form>
+          </td>
+          <td data-label="Durum">
+            <span class="badge <%=p.is_active?'badge-green':'badge-red'%>">
+              <%=p.is_active?'Aktif':'Pasif'%>
+            </span>
+          </td>
+          <td data-label="İşlem">
+            <form action="/products/<%= p.id %>/toggle" method="POST" style="display:inline">
+              <button type="submit" class="btn btn-secondary btn-sm">
+                <%=p.is_active?'Pasifleştir':'Aktifleştir'%>
+              </button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<%- include('_footer') %>

@@ -1,0 +1,106 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#127970; Raf Yönetimi</h1>
+</div>
+
+<% if (success) { %>
+<div class="alert alert-success"><span class="alert-icon">&#10003;</span> İşlem başarıyla tamamlandı.</div>
+<% } %>
+<% if (error) { %>
+<div class="alert alert-danger"><span class="alert-icon">&#9888;</span> <%= error %></div>
+<% } %>
+
+<!-- YENİ RAF -->
+<div class="card mb-3">
+  <div class="card-title">Yeni Raf Ekle</div>
+  <form action="/shelves" method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Raf Kodu <span class="req">*</span></label>
+        <input type="text" name="shelf_code" required placeholder="1-A veya D-1A"
+               style="text-transform:uppercase;font-weight:700">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Raf Tipi <span class="req">*</span></label>
+        <select name="shelf_type" required>
+          <option value="">— Seç —</option>
+          <option value="main">&#127970; Ana Raf (1-A … 8-F)</option>
+          <option value="evaluation">&#128195; Değerlendirme (D-1A …)</option>
+          <option value="system">&#9881; Sistem Alanı (SATIŞ, FİRE)</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">+ Raf Ekle</button>
+  </form>
+</div>
+
+<!-- RAF LİSTESİ -->
+<div class="card">
+  <div class="card-title">Raf Listesi (<%= shelves.length %>)</div>
+  <%
+    const mainShelves  = shelves.filter(s => s.shelf_type==='main');
+    const evalShelves  = shelves.filter(s => s.shelf_type==='evaluation');
+    const sysShelves   = shelves.filter(s => s.shelf_type==='system');
+  %>
+
+  <% if (mainShelves.length) { %>
+  <div class="section-title">&#127970; Ana Rulo Rafları (<%= mainShelves.length %>)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    <% mainShelves.forEach(s => { %>
+    <div style="display:inline-flex;align-items:center;gap:6px;
+                background:<%=s.is_active?'#f0fdf4':'#fef2f2'%>;
+                border:1px solid <%=s.is_active?'#86efac':'#fca5a5'%>;
+                border-radius:6px;padding:6px 12px;font-size:.88rem">
+      <span class="fw-bold"><%= s.shelf_code %></span>
+      <form action="/shelves/<%= s.id %>/toggle" method="POST" style="margin:0">
+        <button type="submit" class="btn btn-secondary btn-sm" style="padding:2px 8px;min-height:26px;font-size:.75rem">
+          <%=s.is_active?'Pasif':'Aktif'%>
+        </button>
+      </form>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (evalShelves.length) { %>
+  <div class="section-title">&#128195; Değerlendirme Rafları (<%= evalShelves.length %>)</div>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead><tr><th>Raf</th><th>Durum</th><th>İşlem</th></tr></thead>
+      <tbody>
+        <% evalShelves.forEach(s => { %>
+        <tr>
+          <td data-label="Raf" class="fw-bold"><%= s.shelf_code %></td>
+          <td data-label="Durum"><span class="badge <%=s.is_active?'badge-green':'badge-red'%>"><%=s.is_active?'Aktif':'Pasif'%></span></td>
+          <td data-label="İşlem">
+            <form action="/shelves/<%= s.id %>/toggle" method="POST" style="display:inline">
+              <button type="submit" class="btn btn-secondary btn-sm"><%=s.is_active?'Pasifleştir':'Aktifleştir'%></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+
+  <% if (sysShelves.length) { %>
+  <div class="section-title">&#9881; Sistem Alanları (<%= sysShelves.length %>)</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Alan</th><th>Açıklama</th></tr></thead>
+      <tbody>
+        <% sysShelves.forEach(s => { %>
+        <tr>
+          <td class="fw-bold"><%= s.shelf_code %></td>
+          <td class="fs-sm text-muted">Sistem alanı — değiştirilemez</td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<%- include('_footer') %>

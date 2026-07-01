@@ -1,0 +1,391 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#9986; Kesim / Sarf Girişi</h1>
+</div>
+
+<% if (success) { %>
+<div class="alert alert-success">
+  <span class="alert-icon">&#10003;</span>
+  <span>Kesim kaydı başarıyla oluşturuldu!</span>
+</div>
+<% } %>
+<% if (error) { %>
+<div class="alert alert-danger">
+  <span class="alert-icon">&#9888;</span>
+  <span><%= error %></span>
+</div>
+<% } %>
+
+<div class="card">
+  <form action="/cutting-entry" method="POST" id="cutForm">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="entry_date">Tarih <span class="req">*</span></label>
+        <input type="date" id="entry_date" name="entry_date" required
+               value="<%= formData.entry_date || new Date().toISOString().split('T')[0] %>">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="output_type">Çıkış Tipi <span class="req">*</span></label>
+        <select id="output_type" name="output_type" required>
+          <option value="">— Seç —</option>
+          <option value="sales"      <%=formData.output_type==='sales'      ?'selected':''%>>&#128200; Satış</option>
+          <option value="fire"       <%=formData.output_type==='fire'       ?'selected':''%>>&#128293; Fire</option>
+          <option value="evaluation" <%=formData.output_type==='evaluation' ?'selected':''%>>&#128195; Değerlendirme</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ÜRÜN KODU -->
+    <div class="form-group">
+      <label class="form-label" for="product_code">Ürün Kodu <span class="req">*</span></label>
+      <input type="text" id="product_code" name="product_code"
+             list="product-list" required
+             placeholder="Ürün kodu yazın veya seçin..."
+             value="<%= formData.product_code || '' %>"
+             autocomplete="off"
+             inputmode="text"
+             style="text-transform:uppercase;font-size:1.1rem;font-weight:700">
+      <datalist id="product-list">
+        <% products.forEach(p => { %>
+        <option value="<%= p.product_code %>"><%= p.name ? p.product_code + ' — ' + p.name : p.product_code %></option>
+        <% }) %>
+      </datalist>
+      <div class="form-hint" id="productHint"></div>
+    </div>
+
+    <!-- LOT / KAYNAK RAF -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="lot_barcode">Lot / Barkod <span class="req">*</span></label>
+        <select id="lot_barcode" name="lot_barcode" required disabled>
+          <option value="">— Önce ürün kodu girin —</option>
+          <% if(formData.lot_barcode){%>
+          <option value="<%= formData.lot_barcode %>" selected><%= formData.lot_barcode %></option>
+          <%}%>
+        </select>
+        <div class="form-hint" id="lotHint">Ürün kodu girilince stokta kalan lotlar görünür.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="source_shelf_id">Kaynak Raf <span class="req">*</span></label>
+        <select id="source_shelf_id" name="source_shelf_id" required disabled>
+          <option value="">— Lot seçilince dolar —</option>
+        </select>
+        <div class="form-hint" id="shelfTypeHint" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- KALAN METRE -->
+    <div class="form-group" id="remainingGroup" style="display:none">
+      <label class="form-label">Kalan Stok</label>
+      <div class="stock-info-box" id="remainingBox">—</div>
+    </div>
+
+    <!-- KESİM BİLGİLERİ -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="cut_cm">Kesim (cm) <span class="req">*</span></label>
+        <input type="number" id="cut_cm" name="cut_cm" required
+               min="0.01" step="0.01" placeholder="Örn: 230"
+               inputmode="decimal"
+               value="<%= formData.cut_cm || '' %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="quantity">Adet <span class="req">*</span></label>
+        <input type="number" id="quantity" name="quantity" required
+               min="1" step="1" placeholder="Örn: 14"
+               inputmode="numeric"
+               value="<%= formData.quantity || '' %>">
+      </div>
+    </div>
+
+    <!-- HESAPLANAN ÇIKIŞ -->
+    <div class="form-group">
+      <label class="form-label">Hesaplanan Çıkış Metre</label>
+      <div class="calc-box" id="calcBox">— m</div>
+      <div class="form-hint">cut_cm &times; adet / 100 = toplam metre</div>
+    </div>
+
+    <!-- DEĞERLENDİRME RAFI (sadece evaluation seçiliyse) -->
+    <div class="form-group" id="evalShelfGroup" style="display:none">
+      <label class="form-label" for="target_shelf_id">Değerlendirme Rafı <span class="req">*</span></label>
+      <select id="target_shelf_id" name="target_shelf_id">
+        <option value="">— Raf Seç —</option>
+        <% evalShelves.forEach(s => { %>
+        <option value="<%= s.id %>" <%=formData.target_shelf_id==s.id?'selected':''%>>
+          <%= s.shelf_code %>
+        </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <!-- HEDEF BİLGİSİ (satış/fire) -->
+    <div class="form-group" id="targetInfo" style="display:none">
+      <label class="form-label">Hedef Alan</label>
+      <div class="stock-info-box has-value" id="targetInfoBox">—</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="note">Not (isteğe bağlı)</label>
+      <input type="text" id="note" name="note"
+             placeholder="Açıklama varsa yazın"
+             value="<%= formData.note || '' %>">
+    </div>
+
+    <div class="btn-group mt-2">
+      <button type="submit" class="btn btn-success btn-lg" id="submitBtn" style="flex:1" disabled>
+        &#9986; Kesimi Kaydet
+      </button>
+      <a href="/" class="btn btn-secondary btn-lg">İptal</a>
+    </div>
+  </form>
+</div>
+
+<!-- SON KESİMLER -->
+<% if (recent && recent.length) { %>
+<div class="card mt-3">
+  <div class="card-title">Son Kesim Kayıtları</div>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th><th>Tip</th><th>Ürün</th><th>Lot</th>
+          <th>Raf</th><th>cm</th><th>Adet</th><th>Metre</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% recent.forEach(r => { %>
+        <tr>
+          <td data-label="Tarih"><%= new Date(r.entry_date).toLocaleDateString('tr-TR') %></td>
+          <td data-label="Tip">
+            <% if(r.output_type==='sales'){%><span class="badge badge-blue">Satış</span>
+            <%}else if(r.output_type==='fire'){%><span class="badge badge-red">Fire</span>
+            <%}else{%><span class="badge badge-yellow">Değer.</span><%}%>
+          </td>
+          <td data-label="Ürün" class="fw-bold"><%= r.product_code %></td>
+          <td data-label="Lot"  style="font-family:monospace;font-size:.85rem"><%= r.lot_barcode %></td>
+          <td data-label="Raf"><span class="badge badge-gray"><%= r.source_shelf %></span></td>
+          <td data-label="cm"><%= r.cut_cm %></td>
+          <td data-label="Adet"><%= r.quantity %></td>
+          <td data-label="Metre" class="fw-bold text-danger"><%= Number(r.total_meter).toFixed(2) %> m</td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<script>
+const productInput = document.getElementById('product_code');
+const lotSel       = document.getElementById('lot_barcode');
+const shelfSel     = document.getElementById('source_shelf_id');
+const remainGrp    = document.getElementById('remainingGroup');
+const remainBox    = document.getElementById('remainingBox');
+const calcBox      = document.getElementById('calcBox');
+const cutCmInput   = document.getElementById('cut_cm');
+const qtyInput     = document.getElementById('quantity');
+const outputSel    = document.getElementById('output_type');
+const evalGrp      = document.getElementById('evalShelfGroup');
+const evalSh       = document.getElementById('target_shelf_id');
+const targetInfo   = document.getElementById('targetInfo');
+const targetBox    = document.getElementById('targetInfoBox');
+const submitBtn    = document.getElementById('submitBtn');
+const lotHint      = document.getElementById('lotHint');
+const productHint  = document.getElementById('productHint');
+const shelfTypeHint = document.getElementById('shelfTypeHint');
+
+let currentRemaining = 0;
+let lotsData = [];
+
+// ── Çıkış tipi değişince ──────────────────────────────────────
+outputSel.addEventListener('change', updateOutputType);
+function updateOutputType() {
+  const v = outputSel.value;
+  if (v === 'evaluation') {
+    evalGrp.style.display = 'block';
+    evalSh.required = true;
+    targetInfo.style.display = 'none';
+  } else {
+    evalGrp.style.display = 'none';
+    evalSh.required = false;
+    evalSh.value = '';
+    if (v === 'sales' || v === 'fire') {
+      targetInfo.style.display = 'block';
+      targetBox.textContent = v === 'sales' ? '→ SATIŞ alanına gönderilecek' : '→ FİRE alanına gönderilecek';
+    } else {
+      targetInfo.style.display = 'none';
+    }
+  }
+  updateSubmitState();
+}
+
+// ── Ürün kodu değişince lotları getir ─────────────────────────
+let productTimer = null;
+productInput.addEventListener('input', () => {
+  const pos = productInput.selectionStart;
+  productInput.value = productInput.value.toUpperCase();
+  productInput.setSelectionRange(pos, pos);
+  clearTimeout(productTimer);
+  productTimer = setTimeout(loadLots, 500);
+});
+productInput.addEventListener('change', loadLots);
+
+async function loadLots() {
+  const code = productInput.value.trim();
+  if (!code) { resetLotShelf(); return; }
+  lotSel.disabled = true;
+  lotSel.innerHTML = '<option value="">Yükleniyor... &#9203;</option>';
+  shelfSel.innerHTML = '<option value="">—</option>';
+  shelfSel.disabled = true;
+  resetRemaining();
+  try {
+    const res = await fetch('/api/lots?product_code=' + encodeURIComponent(code));
+    lotsData = await res.json();
+    if (!lotsData.length) {
+      lotSel.innerHTML = '<option value="">Bu üründe stok bulunamadı</option>';
+      lotHint.textContent = 'Stokta bu ürün kodu yok. Önce rulo girişi yapın.';
+      lotHint.style.color = '#b91c1c';
+      updateSubmitState();
+      return;
+    }
+    lotSel.innerHTML = '<option value="">— Lot Seç —</option>';
+    lotsData.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.lot_barcode + '||' + l.shelf_id;
+      opt.dataset.lot = l.lot_barcode;
+      opt.dataset.shelfId = l.shelf_id;
+      opt.dataset.shelfCode = l.shelf_code;
+      opt.dataset.shelfType = l.shelf_type || 'main';
+      opt.dataset.remaining = l.remaining_meter;
+      const typeLabel = l.shelf_type === 'evaluation' ? ' [DEĞ.RAF]' : '';
+      opt.textContent = `${l.lot_barcode} — ${l.shelf_code}${typeLabel} (kalan: ${Number(l.remaining_meter).toFixed(2)} m)`;
+      lotSel.appendChild(opt);
+    });
+    lotSel.disabled = false;
+    lotHint.textContent = lotsData.length + ' lot/raf kombinasyonu bulundu.';
+    lotHint.style.color = '';
+    productHint.textContent = '';
+  } catch(e) {
+    lotSel.innerHTML = '<option value="">Hata oluştu</option>';
+  }
+}
+
+// ── Lot seçilince raf ve kalan ────────────────────────────────
+lotSel.addEventListener('change', () => {
+  const opt = lotSel.options[lotSel.selectedIndex];
+  if (!opt || !opt.dataset.lot) {
+    resetRemaining();
+    shelfSel.innerHTML = '<option value="">—</option>';
+    shelfSel.disabled = true;
+    shelfTypeHint.style.display = 'none';
+    updateSubmitState();
+    return;
+  }
+  lotSel.setAttribute('data-selected-lot', opt.dataset.lot);
+  shelfSel.innerHTML = `<option value="${opt.dataset.shelfId}">${opt.dataset.shelfCode}</option>`;
+  shelfSel.disabled = false;
+  currentRemaining = parseFloat(opt.dataset.remaining) || 0;
+  updateRemainingBox(currentRemaining);
+  remainGrp.style.display = 'block';
+
+  if (opt.dataset.shelfType === 'evaluation') {
+    shelfTypeHint.textContent = '&#128195; Değerlendirme rafından kesim — parça "kullanıldı" olarak işaretlenecek.';
+    shelfTypeHint.innerHTML = '&#128195; Değerlendirme rafından kesim — parça "kullanıldı" olarak işaretlenecek.';
+    shelfTypeHint.style.display = 'block';
+    shelfTypeHint.style.color = '#92400e';
+  } else {
+    shelfTypeHint.style.display = 'none';
+  }
+  recalcAndCheck();
+});
+
+// Form submit: lot_barcode ve source_shelf_id'yi düzelt
+document.getElementById('cutForm').addEventListener('submit', (e) => {
+  const opt = lotSel.options[lotSel.selectedIndex];
+  if (opt && opt.dataset.lot) {
+    let hidLot = document.getElementById('_hidden_lot');
+    if (!hidLot) {
+      hidLot = document.createElement('input');
+      hidLot.type = 'hidden'; hidLot.name = 'lot_barcode'; hidLot.id = '_hidden_lot';
+      document.getElementById('cutForm').appendChild(hidLot);
+      lotSel.removeAttribute('name');
+    }
+    hidLot.value = opt.dataset.lot;
+  }
+});
+
+function resetLotShelf() {
+  lotSel.innerHTML = '<option value="">— Önce ürün kodu girin —</option>';
+  lotSel.disabled = true;
+  shelfSel.innerHTML = '<option value="">—</option>';
+  shelfSel.disabled = true;
+  shelfTypeHint.style.display = 'none';
+  resetRemaining();
+}
+
+function resetRemaining() {
+  currentRemaining = 0;
+  remainGrp.style.display = 'none';
+  remainBox.textContent = '—';
+  remainBox.className = 'stock-info-box';
+}
+
+function updateRemainingBox(val) {
+  remainBox.textContent = val.toFixed(2) + ' m kalan';
+  if (val <= 0)   remainBox.className = 'stock-info-box empty';
+  else if (val < 10) remainBox.className = 'stock-info-box low';
+  else               remainBox.className = 'stock-info-box has-value';
+}
+
+cutCmInput.addEventListener('input', recalcAndCheck);
+qtyInput.addEventListener('input',   recalcAndCheck);
+
+function recalcAndCheck() {
+  const cm  = parseFloat(cutCmInput.value) || 0;
+  const qty = parseInt(qtyInput.value, 10)  || 0;
+  if (cm > 0 && qty > 0) {
+    const total = Math.round(cm * qty / 100 * 100) / 100;
+    calcBox.textContent = total.toFixed(2) + ' m';
+    calcBox.classList.add('visible');
+    if (currentRemaining > 0 && total > currentRemaining) {
+      calcBox.className = 'calc-box visible over';
+    } else {
+      calcBox.className = 'calc-box visible';
+    }
+  } else {
+    calcBox.classList.remove('visible');
+  }
+  updateSubmitState();
+}
+
+function updateSubmitState() {
+  const hasProduct = productInput.value.trim();
+  const hasLot     = lotSel.value;
+  const hasShelf   = shelfSel.value;
+  const hasCm      = parseFloat(cutCmInput.value) > 0;
+  const hasQty     = parseInt(qtyInput.value,10)  > 0;
+  const hasType    = outputSel.value;
+  const evalOk     = outputSel.value !== 'evaluation' || evalSh.value;
+  const cm  = parseFloat(cutCmInput.value) || 0;
+  const qty = parseInt(qtyInput.value,10)  || 0;
+  const total = Math.round(cm * qty / 100 * 100) / 100;
+  const stockOk = currentRemaining <= 0 || total <= currentRemaining;
+
+  const ok = hasProduct && hasLot && hasShelf && hasCm && hasQty && hasType && evalOk && stockOk;
+  submitBtn.disabled = !ok;
+  if (!stockOk) {
+    submitBtn.textContent = '⚠ Stok Yetersiz — Kayıt Yapılamaz';
+  } else {
+    submitBtn.textContent = '✂ Kesimi Kaydet';
+  }
+}
+
+outputSel.dispatchEvent(new Event('change'));
+if (productInput.value) loadLots();
+</script>
+
+<%- include('_footer') %>

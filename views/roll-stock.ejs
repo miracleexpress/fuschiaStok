@@ -1,0 +1,114 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#128230; Rulo Stok</h1>
+</div>
+
+<div class="filter-bar">
+  <form method="GET" action="/reports/roll-stock">
+    <div class="form-group">
+      <label class="form-label">Ürün Kodu</label>
+      <input type="text" name="product_code" placeholder="DT-04"
+             value="<%= filter.product_code||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lot / Barkod</label>
+      <input type="text" name="lot_barcode" placeholder="JAL-..."
+             value="<%= filter.lot_barcode||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Raf</label>
+      <input type="text" name="shelf_code" placeholder="1-A"
+             value="<%= filter.shelf_code||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Sıralama</label>
+      <select name="sort">
+        <option value=""               <%=!filter.sort           ?'selected':''%>>Ürün Kodu</option>
+        <option value="remaining_desc" <%=filter.sort==='remaining_desc'?'selected':''%>>Kalan ↓</option>
+        <option value="remaining_asc"  <%=filter.sort==='remaining_asc' ?'selected':''%>>Kalan ↑</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Filtrele</button>
+    <a href="/reports/roll-stock" class="btn btn-secondary">Temizle</a>
+    <a href="/reports/rulo-stok.csv?<%= new URLSearchParams(filter).toString() %>"
+       class="btn btn-secondary" style="color:#059669">&#8595; CSV</a>
+  </form>
+</div>
+
+<% if (!rows.length) { %>
+<div class="card">
+  <div class="empty-state"><span class="es-icon">&#128230;</span>Stok kaydı bulunamadı.</div>
+</div>
+<% } else { %>
+
+<%
+  let totalIn=0, totalOut=0, totalRem=0;
+  rows.forEach(r => {
+    totalIn  += parseFloat(r.total_in_meter  || 0);
+    totalOut += parseFloat(r.total_out_meter || 0);
+    totalRem += parseFloat(r.remaining_meter || 0);
+  });
+%>
+
+<!-- ÖZET -->
+<div class="stat-grid mb-3">
+  <div class="stat-card">
+    <span class="stat-value"><%= rows.length %></span>
+    <span class="stat-label">Lot/Raf Kaydı</span>
+  </div>
+  <div class="stat-card success">
+    <span class="stat-value"><%= totalRem.toFixed(2) %></span>
+    <span class="stat-label">Toplam Kalan (m)</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value"><%= totalIn.toFixed(2) %></span>
+    <span class="stat-label">Toplam Giriş (m)</span>
+  </div>
+  <div class="stat-card danger">
+    <span class="stat-value"><%= totalOut.toFixed(2) %></span>
+    <span class="stat-label">Toplam Çıkış (m)</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Ürün Kodu</th>
+          <th>Ürün Adı</th>
+          <th>Lot / Barkod</th>
+          <th>Raf</th>
+          <th style="text-align:right">Giriş (m)</th>
+          <th style="text-align:right">Çıkış (m)</th>
+          <th style="text-align:right">Kalan (m)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(r => { %>
+        <tr>
+          <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
+          <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
+          <td data-label="Lot" style="font-family:monospace;font-size:.88rem"><%= r.lot_barcode %></td>
+          <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
+          <td data-label="Giriş (m)"  class="text-success" style="text-align:right"><%= Number(r.total_in_meter).toFixed(2) %></td>
+          <td data-label="Çıkış (m)"  class="text-danger"  style="text-align:right"><%= Number(r.total_out_meter).toFixed(2) %></td>
+          <td data-label="Kalan (m)"  class="fw-black fs-lg" style="text-align:right"><%= Number(r.remaining_meter).toFixed(2) %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr class="tfoot-total">
+          <td colspan="4">TOPLAM (<%= rows.length %> kayıt)</td>
+          <td class="text-success" style="text-align:right"><%= totalIn.toFixed(2) %></td>
+          <td class="text-danger"  style="text-align:right"><%= totalOut.toFixed(2) %></td>
+          <td class="fw-black"     style="text-align:right"><%= totalRem.toFixed(2) %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<%- include('_footer') %>

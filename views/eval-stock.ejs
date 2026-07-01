@@ -1,0 +1,74 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#128195; Değerlendirme Stok</h1>
+</div>
+
+<div class="filter-bar">
+  <form method="GET" action="/reports/eval-stock">
+    <div class="form-group">
+      <label class="form-label">Ürün Kodu</label>
+      <input type="text" name="product_code" placeholder="DT-04"
+             value="<%= filter.product_code||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Raf</label>
+      <input type="text" name="shelf_code" placeholder="D-1A"
+             value="<%= filter.shelf_code||'' %>">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Durum</label>
+      <select name="status">
+        <option value="">Tümü</option>
+        <option value="available" <%=filter.status==='available'?'selected':''%>>Mevcut</option>
+        <option value="used"      <%=filter.status==='used'     ?'selected':''%>>Kullanıldı</option>
+        <option value="cancelled" <%=filter.status==='cancelled'?'selected':''%>>İptal</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Filtrele</button>
+    <a href="/reports/eval-stock" class="btn btn-secondary">Temizle</a>
+    <a href="/reports/degerlendirme.csv?<%= new URLSearchParams(filter).toString() %>"
+       class="btn btn-secondary" style="color:#059669">&#8595; CSV</a>
+  </form>
+</div>
+
+<% if (!rows.length) { %>
+<div class="card">
+  <div class="empty-state"><span class="es-icon">&#128195;</span>Değerlendirme kaydı bulunamadı.</div>
+</div>
+<% } else { %>
+<div class="card">
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th><th>Ürün</th><th>Lot</th>
+          <th>Kaynak Raf</th><th>Değer. Rafı</th>
+          <th>cm</th><th>Adet</th><th>Toplam (m)</th><th>Durum</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(r => { %>
+        <tr>
+          <td data-label="Tarih"><%= new Date(r.entry_date).toLocaleDateString('tr-TR') %></td>
+          <td data-label="Ürün" class="fw-bold"><%= r.product_code %></td>
+          <td data-label="Lot"  style="font-family:monospace;font-size:.85rem"><%= r.lot_barcode %></td>
+          <td data-label="Kaynak"><span class="badge badge-gray"><%= r.source_shelf %></span></td>
+          <td data-label="Değer. Rafı"><span class="badge badge-yellow"><%= r.evaluation_shelf %></span></td>
+          <td data-label="cm"><%= r.cut_cm %></td>
+          <td data-label="Adet"><%= r.quantity %></td>
+          <td data-label="Toplam (m)" class="fw-bold"><%= Number(r.total_meter).toFixed(2) %></td>
+          <td data-label="Durum">
+            <% if(r.status==='available'){%><span class="badge badge-green">Mevcut</span>
+            <%}else if(r.status==='used'){%><span class="badge badge-gray">Kullanıldı</span>
+            <%}else{%><span class="badge badge-red">İptal</span><%}%>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<%- include('_footer') %>

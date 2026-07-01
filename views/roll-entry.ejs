@@ -1,0 +1,181 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#8679; Rulo Girişi</h1>
+</div>
+
+<% if (success) { %>
+<div class="alert alert-success">
+  <span class="alert-icon">&#10003;</span>
+  <span>Rulo başarıyla kaydedildi!
+    <% if (locals.query && locals.query.auto_created) { %> (Yeni ürün otomatik oluşturuldu)<% } %>
+  </span>
+</div>
+<% } %>
+
+<% if (warning === 'duplicate_lot') { %>
+<div class="alert alert-warning">
+  <span class="alert-icon">&#9888;</span>
+  <span>Bu lot/barkod daha önce aynı ürün için kaydedilmiştir. Yine de kaydedildi (çoklu rulo / parti).</span>
+</div>
+<% } %>
+
+<% if (error) { %>
+<div class="alert alert-danger">
+  <span class="alert-icon">&#9888;</span>
+  <span><%= error %></span>
+</div>
+<% } %>
+
+<div class="card">
+  <form action="/roll-entry" method="POST" id="rollForm">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="entry_date">Tarih <span class="req">*</span></label>
+        <input type="date" id="entry_date" name="entry_date" required
+               value="<%= formData.entry_date || new Date().toISOString().split('T')[0] %>">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="shelf_id">Raf <span class="req">*</span></label>
+        <select id="shelf_id" name="shelf_id" required>
+          <option value="">— Raf Seç —</option>
+          <% shelves.forEach(s => { %>
+          <option value="<%= s.id %>" <%= formData.shelf_id==s.id?'selected':'' %>>
+            <%= s.shelf_code %>
+          </option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="product_code">
+        Ürün Kodu <span class="req">*</span>
+        <span class="fs-sm text-muted fw-bold"> — Yoksa otomatik oluşturulur</span>
+      </label>
+      <input type="text" id="product_code" name="product_code" required
+             placeholder="Örn: DT-04"
+             value="<%= formData.product_code || '' %>"
+             autocomplete="off"
+             inputmode="text"
+             style="text-transform:uppercase;font-size:1.2rem;font-weight:700;letter-spacing:1px">
+      <div class="form-hint">Büyük harf önerilir. Mevcut ürünler: <span id="productHint" class="text-primary">yükleniyor...</span></div>
+      <div id="lotCheckResult" style="margin-top:8px;display:none"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="lot_barcode">
+          Lot / Barkod No <span class="req">*</span>
+        </label>
+        <input type="text" id="lot_barcode" name="lot_barcode" required
+               autofocus
+               placeholder="Jalpersan barkodunu okutun veya yazın"
+               value="<%= formData.lot_barcode || '' %>"
+               autocomplete="off"
+               inputmode="text"
+               style="font-size:1.05rem;font-family:monospace">
+        <div class="form-hint">Tedarikçi: Jalpersan — barkod okuyucuyla tarayabilirsiniz</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="entry_meter">Giriş Metre <span class="req">*</span></label>
+        <input type="number" id="entry_meter" name="entry_meter" required
+               min="0.01" step="0.01" placeholder="0.00"
+               inputmode="decimal"
+               value="<%= formData.entry_meter || '' %>">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="note">Not (isteğe bağlı)</label>
+      <input type="text" id="note" name="note"
+             placeholder="Açıklama varsa yazın"
+             value="<%= formData.note || '' %>">
+    </div>
+
+    <div class="btn-group mt-2">
+      <button type="submit" class="btn btn-primary btn-lg" style="flex:1">
+        &#8679; Ruloyu Kaydet
+      </button>
+      <a href="/" class="btn btn-secondary btn-lg">İptal</a>
+    </div>
+  </form>
+</div>
+
+<!-- SON GİRİŞLER -->
+<% if (recent && recent.length) { %>
+<div class="card mt-3">
+  <div class="card-title">Son Rulo Girişleri</div>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th><th>Ürün</th><th>Lot / Barkod</th>
+          <th>Raf</th><th>Metre</th><th>Kaydeden</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% recent.forEach(r => { %>
+        <tr>
+          <td data-label="Tarih"><%= new Date(r.entry_date).toLocaleDateString('tr-TR') %></td>
+          <td data-label="Ürün" class="fw-bold"><%= r.product_code %></td>
+          <td data-label="Lot"  style="font-family:monospace;font-size:.9rem"><%= r.lot_barcode %></td>
+          <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
+          <td data-label="Metre" class="fw-bold text-success"><%= Number(r.entry_meter).toFixed(2) %> m</td>
+          <td data-label="Kaydeden" class="fs-sm text-muted"><%= r.created_by %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<script>
+(async () => {
+  try {
+    const res = await fetch('/api/products');
+    const products = await res.json();
+    const hint = document.getElementById('productHint');
+    hint.textContent = products.map(p => p.product_code).join(', ') || 'henüz ürün yok';
+  } catch(e) {
+    document.getElementById('productHint').textContent = '';
+  }
+})();
+
+const productInput = document.getElementById('product_code');
+const lotInput     = document.getElementById('lot_barcode');
+const lotResult    = document.getElementById('lotCheckResult');
+
+async function checkLot() {
+  const pc  = productInput.value.trim();
+  const lot = lotInput.value.trim();
+  if (!pc || !lot) { lotResult.style.display='none'; return; }
+  try {
+    const res  = await fetch(`/api/check-lot?product_code=${encodeURIComponent(pc)}&lot_barcode=${encodeURIComponent(lot)}`);
+    const data = await res.json();
+    lotResult.style.display = 'block';
+    if (data.status === 'ok') {
+      lotResult.innerHTML = '<div class="alert alert-success" style="margin:0;padding:10px 14px"><span class="alert-icon">&#10003;</span> Bu lot bu ürün için ilk kayıt olacak.</div>';
+    } else if (data.status === 'duplicate_same') {
+      lotResult.innerHTML = '<div class="alert alert-warning" style="margin:0;padding:10px 14px"><span class="alert-icon">&#9888;</span> Bu lot daha önce aynı ürün için girilmiş. Birden fazla rulo ise kaydedebilirsiniz.</div>';
+    } else if (data.status === 'duplicate_other') {
+      lotResult.innerHTML = `<div class="alert alert-danger" style="margin:0;padding:10px 14px"><span class="alert-icon">&#128683;</span> Bu lot <strong>${data.product_code}</strong> ürünüyle kayıtlıdır! Farklı ürüne aynı lot atanamaz.</div>`;
+    }
+  } catch(e) { lotResult.style.display='none'; }
+}
+
+lotInput.addEventListener('blur', checkLot);
+productInput.addEventListener('change', () => { if(lotInput.value) checkLot(); });
+
+productInput.addEventListener('input', () => {
+  const pos = productInput.selectionStart;
+  productInput.value = productInput.value.toUpperCase();
+  productInput.setSelectionRange(pos, pos);
+});
+</script>
+
+<%- include('_footer') %>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title><%= title %> — Fuschia Stok</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- OVERLAY (mobil sidebar arkası) -->
+<div class="overlay" id="overlay"></div>
+
+<!-- TOP BAR -->
+<header class="topbar-fixed">
+  <button class="hamburger" id="hamburger" aria-label="Menü">&#9776;</button>
+  <a href="/" class="topbar-logo">Fuschia <span>Stok</span></a>
+  <span class="topbar-title"><%= title %></span>
+  <span class="topbar-user"><%= user ? user.username : '' %> (<%= user && user.userRole==='admin' ? 'Admin' : 'Depo' %>)</span>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <nav style="padding:8px 0; flex:1;">
+
+    <div class="nav-section">Ana Menü</div>
+    <a href="/"              class="nav-link <%- locals.title==='Dashboard'           ? 'active':'' %>"><span class="nav-icon">&#9632;</span> Dashboard</a>
+    <a href="/roll-entry"    class="nav-link <%- locals.title==='Rulo Girişi'         ? 'active':'' %>"><span class="nav-icon">&#8679;</span> Rulo Girişi</a>
+    <a href="/cutting-entry" class="nav-link <%- locals.title==='Kesim / Sarf Girişi' ? 'active':'' %>"><span class="nav-icon">&#9986;</span> Kesim / Sarf</a>
+
+    <div class="nav-section">Raporlar</div>
+    <a href="/reports/roll-stock"  class="nav-link <%- locals.title==='Rulo Stok'          ? 'active':'' %>"><span class="nav-icon">&#128230;</span> Rulo Stok</a>
+    <a href="/reports/eval-stock"  class="nav-link <%- locals.title==='Değerlendirme Stok' ? 'active':'' %>"><span class="nav-icon">&#128195;</span> Değerlendirme</a>
+    <a href="/reports/sales"       class="nav-link <%- locals.title==='Satış Raporu'        ? 'active':'' %>"><span class="nav-icon">&#128200;</span> Satış Raporu</a>
+    <a href="/reports/fire"        class="nav-link <%- locals.title==='Fire Raporu'         ? 'active':'' %>"><span class="nav-icon">&#128293;</span> Fire Raporu</a>
+    <a href="/reports/movements"   class="nav-link <%- locals.title==='Stok Hareketleri'   ? 'active':'' %>"><span class="nav-icon">&#128257;</span> Tüm Hareketler</a>
+
+    <% if (user && user.userRole === 'admin') { %>
+    <div class="nav-section">Yönetim</div>
+    <a href="/products" class="nav-link <%- locals.title==='Ürün Yönetimi'     ? 'active':'' %>"><span class="nav-icon">&#127981;</span> Ürünler</a>
+    <a href="/shelves"  class="nav-link <%- locals.title==='Raf Yönetimi'      ? 'active':'' %>"><span class="nav-icon">&#127970;</span> Raflar</a>
+    <a href="/users"    class="nav-link <%- locals.title==='Kullanıcı Yönetimi'? 'active':'' %>"><span class="nav-icon">&#128100;</span> Kullanıcılar</a>
+    <% } %>
+  </nav>
+
+  <div class="sidebar-footer">
+    <span class="sf-name"><%= user ? user.username : '' %></span>
+    <span class="sf-role"><%= user && user.userRole==='admin' ? 'Yönetici' : 'Depo Kullanıcısı' %></span>
+    <form action="/logout" method="POST">
+      <button type="submit" class="btn btn-danger btn-sm btn-block">&#x2715; Çıkış Yap</button>
+    </form>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT START -->
+<main class="main">
