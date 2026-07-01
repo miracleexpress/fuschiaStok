@@ -1,6 +1,5 @@
 const express = require('express');
 const pool    = require('../db/pool');
-const { parseProductCode } = require('../utils/calculations');
 
 const router = express.Router();
 
@@ -89,26 +88,16 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // ── Ürün bul ya da oluştur ────────────────────────────────────────────
-    let productRow = await client.query(
+    // ── Ürün bul ─────────────────────────────────────────────────────────
+    const productRow = await client.query(
       'SELECT id, product_code FROM products WHERE UPPER(product_code) = $1',
       [cleanProduct]
     );
-    let productId;
-    let autoCreated = false;
-
     if (productRow.rows.length === 0) {
-      const { pattern_code, variant_code } = parseProductCode(cleanProduct);
-      const ins = await client.query(
-        `INSERT INTO products (product_code, pattern_code, variant_code)
-         VALUES ($1, $2, $3) RETURNING id`,
-        [cleanProduct, pattern_code, variant_code]
-      );
-      productId   = ins.rows[0].id;
-      autoCreated = true;
-    } else {
-      productId = productRow.rows[0].id;
+      await client.query('ROLLBACK');
+      return renderForm(`"${cleanProduct}" kodlu ürün bulunamadı. Önce Ürünler sayfasından ekleyin.`);
     }
+    const productId = productRow.rows[0].id;
 
     // ── Lot çakışma kontrolü: başka ürünle eşleşiyor mu? ─────────────────
     const conflict = await client.query(
@@ -160,8 +149,7 @@ router.post('/', async (req, res) => {
     await client.query('COMMIT');
 
     let qs = 'success=1';
-    if (autoCreated)  qs += '&auto_created=1';
-    if (isDuplicate)  qs += '&warning=duplicate_lot';
+    if (isDuplicate) qs += '&warning=duplicate_lot';
     res.redirect('/roll-entry?' + qs);
   } catch (err) {
     await client.query('ROLLBACK');

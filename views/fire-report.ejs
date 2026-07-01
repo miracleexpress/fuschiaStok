@@ -38,8 +38,12 @@
   </form>
 </div>
 
-<% if (rows.length) { %>
 <div class="stat-grid mb-3">
+  <div class="stat-card danger">
+    <span class="stat-value"><%= fireRatio.toFixed(2) %>%</span>
+    <span class="stat-label">Genel Fire Oranı (tüm rulo girişine oranla)</span>
+  </div>
+  <% if (rows.length) { %>
   <div class="stat-card danger">
     <span class="stat-value"><%= Number(totals.total_meter||0).toFixed(2) %></span>
     <span class="stat-label">Toplam Fire (m)</span>
@@ -52,8 +56,8 @@
     <span class="stat-value"><%= rows.length %></span>
     <span class="stat-label">Kayıt Sayısı</span>
   </div>
+  <% } %>
 </div>
-<% } %>
 
 <div class="card">
   <% if (!rows.length) { %>

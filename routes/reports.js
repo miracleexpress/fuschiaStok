@@ -144,17 +144,23 @@ router.get('/fire', async (req, res) => {
     if (lot_barcode)  { totalParams.push('%' + lot_barcode.trim() + '%'); totalSql += ` AND ce.lot_barcode ILIKE $${totalParams.length}`; }
     if (username)     { totalParams.push(username.trim()); totalSql += ` AND u.username = $${totalParams.length}`; }
 
-    const [result, totals, users] = await Promise.all([
+    const [result, totals, overall, users] = await Promise.all([
       pool.query(sql, params),
       pool.query(totalSql, totalParams),
+      pool.query('SELECT total_in_meter, total_fire_meter FROM v_dashboard_summary'),
       getUserList(),
     ]);
+
+    const totalInMeter  = parseFloat(overall.rows[0]?.total_in_meter  || 0);
+    const totalFireMeter = parseFloat(overall.rows[0]?.total_fire_meter || 0);
+    const fireRatio = totalInMeter > 0 ? (totalFireMeter / totalInMeter) * 100 : 0;
 
     res.render('fire-report', {
       title: 'Fire Raporu',
       user: req.session,
       rows: result.rows,
       totals: totals.rows[0],
+      fireRatio,
       filter: req.query,
       users,
     });

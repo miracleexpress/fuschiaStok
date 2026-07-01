@@ -384,6 +384,8 @@ function updateSubmitState() {
   }
 }
 
+evalSh.addEventListener('change', updateSubmitState);
+
 outputSel.dispatchEvent(new Event('change'));
 if (productInput.value) loadLots();
 </script>
