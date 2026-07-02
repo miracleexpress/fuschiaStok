@@ -23,16 +23,17 @@ router.get('/roll-stock', async (req, res) => {
         sm.lot_barcode,
         sh.shelf_code,
         sh.id AS shelf_id,
+        sh.shelf_type,
         SUM(CASE WHEN sm.meter > 0 THEN sm.meter ELSE 0 END)::NUMERIC(12,2)      AS total_in_meter,
         SUM(CASE WHEN sm.meter < 0 THEN ABS(sm.meter) ELSE 0 END)::NUMERIC(12,2) AS total_out_meter,
         SUM(sm.meter)::NUMERIC(12,2)                                               AS remaining_meter
       FROM stock_movements sm
       JOIN products p ON p.id = sm.product_id
       JOIN shelves  sh ON sh.id = CASE
-        WHEN sm.movement_type IN ('roll_in','evaluation_in') THEN sm.target_shelf_id
+        WHEN sm.movement_type IN ('roll_in','evaluation_in','central_in') THEN sm.target_shelf_id
         ELSE sm.source_shelf_id
       END
-      WHERE sh.shelf_type IN ('main', 'evaluation')
+      WHERE sh.shelf_type IN ('regulation', 'main', 'evaluation')
     `;
     const params = [];
 
@@ -50,7 +51,7 @@ router.get('/roll-stock', async (req, res) => {
     }
 
     sql += `
-      GROUP BY p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.id
+      GROUP BY p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.id, sh.shelf_type
       HAVING SUM(sm.meter) > 0
     `;
 
@@ -63,9 +64,11 @@ router.get('/roll-stock', async (req, res) => {
 
     const result = await pool.query(sql, params);
     res.render('roll-stock', {
-      title: 'Rulo Stok',
+      title: 'Stok',
       user: req.session,
-      rows: result.rows,
+      regulationRows: result.rows.filter(r => r.shelf_type === 'regulation'),
+      mainRows:       result.rows.filter(r => r.shelf_type === 'main'),
+      evalRows:       result.rows.filter(r => r.shelf_type === 'evaluation'),
       filter: req.query,
     });
   } catch (err) {
@@ -240,7 +243,7 @@ router.get('/movements', async (req, res) => {
 
     if (date_from) { params.push(date_from); sql += ` AND sm.movement_date >= $${params.length}`; }
     if (date_to)   { params.push(date_to);   sql += ` AND sm.movement_date <= $${params.length}`; }
-    if (movement_type && ['roll_in','sales_out','fire_out','evaluation_out','evaluation_in'].includes(movement_type)) {
+    if (movement_type && ['roll_in','sales_out','fire_out','evaluation_out','evaluation_in','regulation_out','central_in'].includes(movement_type)) {
       params.push(movement_type); sql += ` AND sm.movement_type = $${params.length}`;
     }
     if (product_code) { params.push('%' + product_code.trim() + '%'); sql += ` AND p.product_code ILIKE $${params.length}`; }

@@ -11,6 +11,7 @@ const { requireLogin, requireAdmin } = require('./middleware/auth');
 const authRoutes         = require('./routes/auth');
 const dashboardRoutes    = require('./routes/dashboard');
 const rollEntryRoutes    = require('./routes/rollEntries');
+const regulationTransferRoutes = require('./routes/regulationTransfer');
 const cuttingEntryRoutes = require('./routes/cuttingEntries');
 const reportsRoutes      = require('./routes/reports');
 const exportsRoutes      = require('./routes/exports');
@@ -77,8 +78,9 @@ app.use(session({
 // ── Routes ─────────────────────────────────────────────────────────────────
 app.use('/',               authRoutes);
 app.use('/',               requireLogin, dashboardRoutes);
-app.use('/roll-entry',     requireLogin, rollEntryRoutes);
-app.use('/cutting-entry',  requireLogin, cuttingEntryRoutes);
+app.use('/roll-entry',        requireLogin, rollEntryRoutes);
+app.use('/regulation-transfer', requireLogin, regulationTransferRoutes);
+app.use('/cutting-entry',     requireLogin, cuttingEntryRoutes);
 app.use('/reports',        requireLogin, reportsRoutes);
 app.use('/reports',        requireLogin, exportsRoutes);
 app.use('/products',       requireLogin, requireAdmin, productsRoutes);

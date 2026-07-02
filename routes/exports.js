@@ -41,10 +41,10 @@ router.get('/rulo-stok.csv', async (req, res) => {
     FROM stock_movements sm
     JOIN products p ON p.id = sm.product_id
     JOIN shelves sh ON sh.id = CASE
-      WHEN sm.movement_type IN ('roll_in','evaluation_in') THEN sm.target_shelf_id
+      WHEN sm.movement_type IN ('roll_in','evaluation_in','central_in') THEN sm.target_shelf_id
       ELSE sm.source_shelf_id
     END
-    WHERE sh.shelf_type IN ('main','evaluation')
+    WHERE sh.shelf_type IN ('regulation','main','evaluation')
   `;
   const params = [];
   if (product_code) { params.push(`%${product_code}%`); sql += ` AND p.product_code ILIKE $${params.length}`; }
@@ -58,7 +58,7 @@ router.get('/rulo-stok.csv', async (req, res) => {
       ['Ürün Kodu','Ürün Adı','Lot / Barkod','Raf','Raf Tipi','Giriş (m)','Çıkış (m)','Kalan (m)'],
       rows.map(r => [
         r.product_code, r.name || '', r.lot_barcode, r.shelf_code,
-        r.shelf_type === 'evaluation' ? 'Değerlendirme' : 'Ana Raf',
+        r.shelf_type === 'evaluation' ? 'Değerlendirme' : r.shelf_type === 'regulation' ? 'Regüle Depo' : 'Merkez Depo',
         fmtMeter(r.total_in), fmtMeter(r.total_out), fmtMeter(r.remaining),
       ])
     );
@@ -201,8 +201,9 @@ router.get('/hareketler.csv', async (req, res) => {
   if (date_to)       { params.push(date_to);               sql += ` AND sm.movement_date <= $${params.length}`; }
   sql += ' ORDER BY sm.movement_date DESC, sm.id DESC';
   const typeLabel = {
-    roll_in: 'Rulo Girişi', sales_out: 'Satış', fire_out: 'Fire',
+    roll_in: 'Rulo Girişi (Regüle)', sales_out: 'Satış', fire_out: 'Fire',
     evaluation_out: 'Değer. Çıkış', evaluation_in: 'Değer. Giriş',
+    regulation_out: 'Regüle Çıkış', central_in: 'Merkez Depo Girişi',
   };
   try {
     const { rows } = await pool.query(sql, params);

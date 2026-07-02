@@ -28,7 +28,7 @@ async function getRecentEntries(client) {
 router.get('/', async (req, res) => {
   try {
     const [shelves, recent] = await Promise.all([
-      pool.query("SELECT id, shelf_code FROM shelves WHERE shelf_type='main' AND is_active=TRUE ORDER BY shelf_code"),
+      pool.query("SELECT id, shelf_code FROM shelves WHERE shelf_type='regulation' AND is_active=TRUE ORDER BY shelf_code"),
       getRecentEntries(pool),
     ]);
     res.render('roll-entry', {
@@ -55,7 +55,7 @@ router.post('/', async (req, res) => {
   } = req.body;
 
   const shelves = await pool.query(
-    "SELECT id, shelf_code FROM shelves WHERE shelf_type='main' AND is_active=TRUE ORDER BY shelf_code"
+    "SELECT id, shelf_code FROM shelves WHERE shelf_type='regulation' AND is_active=TRUE ORDER BY shelf_code"
   );
 
   const renderForm = async (error, warning) => {

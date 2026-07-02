@@ -18,7 +18,9 @@
       <label class="form-label">Hareket Tipi</label>
       <select name="movement_type">
         <option value="">Tümü</option>
-        <option value="roll_in"        <%=filter.movement_type==='roll_in'        ?'selected':''%>>Rulo Giriş</option>
+        <option value="roll_in"        <%=filter.movement_type==='roll_in'        ?'selected':''%>>Rulo Giriş (Regüle)</option>
+        <option value="regulation_out" <%=filter.movement_type==='regulation_out' ?'selected':''%>>Regüle Çıkış</option>
+        <option value="central_in"     <%=filter.movement_type==='central_in'     ?'selected':''%>>Merkez Depo Girişi</option>
         <option value="sales_out"      <%=filter.movement_type==='sales_out'      ?'selected':''%>>Satış Çıkış</option>
         <option value="fire_out"       <%=filter.movement_type==='fire_out'       ?'selected':''%>>Fire Çıkış</option>
         <option value="evaluation_out" <%=filter.movement_type==='evaluation_out' ?'selected':''%>>Değerlendirme Çıkış</option>
@@ -68,8 +70,11 @@
           <td data-label="Tarih"><%= new Date(r.movement_date).toLocaleDateString('tr-TR') %></td>
           <td data-label="Tip">
             <% if(r.movement_type==='roll_in'){%><span class="badge badge-green">Rulo Giriş</span>
+            <%}else if(r.movement_type==='regulation_out'){%><span class="badge badge-gray">Regüle Çıkış</span>
+            <%}else if(r.movement_type==='central_in'){%><span class="badge badge-green">Merkez Girişi</span>
             <%}else if(r.movement_type==='sales_out'){%><span class="badge badge-blue">Satış Çıkış</span>
             <%}else if(r.movement_type==='fire_out'){%><span class="badge badge-red">Fire Çıkış</span>
+            <%}else if(r.movement_type==='evaluation_in'){%><span class="badge badge-yellow">Değer. Giriş</span>
             <%}else{%><span class="badge badge-yellow">Değer. Çıkış</span><%}%>
           </td>
           <td data-label="Ürün"   class="fw-bold"><%= r.product_code %></td>

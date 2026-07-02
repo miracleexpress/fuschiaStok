@@ -39,7 +39,7 @@ async function main() {
     );
     console.log('✓ Kullanıcılar oluşturuldu (admin/admin123, depo/depo123)');
 
-    // Raflar — Ana rulo rafları
+    // Raflar — Merkez depo rafları
     const mainShelves = [];
     for (let row = 1; row <= 8; row++) {
       for (const col of ['A','B','C','D','E','F']) {
@@ -53,7 +53,18 @@ async function main() {
         [code]
       );
     }
-    console.log(`✓ ${mainShelves.length} ana raf oluşturuldu`);
+    console.log(`✓ ${mainShelves.length} merkez depo rafı oluşturuldu`);
+
+    // Regüle depo rafları (ilk giriş burada yapılır, sonra merkez depoya aktarılır)
+    const regulationShelves = ['R-1','R-2','R-3','R-4','R-5','R-6','R-7','R-8','R-9','R-10'];
+    for (const code of regulationShelves) {
+      await client.query(
+        `INSERT INTO shelves (shelf_code, shelf_type) VALUES ($1,'regulation')
+         ON CONFLICT (shelf_code) DO NOTHING`,
+        [code]
+      );
+    }
+    console.log(`✓ ${regulationShelves.length} regüle depo rafı oluşturuldu`);
 
     // Değerlendirme rafları
     const evalShelves = ['D-1A','D-1B','D-1C','D-1D','D-1E','D-1F'];

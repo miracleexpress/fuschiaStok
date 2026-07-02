@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
         LIMIT 10
       `),
 
-      // Raf bazlı kalan stok (main + evaluation, kalan > 0)
+      // Raf bazlı kalan stok (regüle + main + evaluation, kalan > 0)
       pool.query(`
         SELECT
           sh.shelf_code,
@@ -68,10 +68,10 @@ router.get('/', async (req, res) => {
           SUM(sm.meter)::NUMERIC(12,2) AS remaining_meter
         FROM stock_movements sm
         JOIN shelves sh ON sh.id = CASE
-          WHEN sm.movement_type IN ('roll_in','evaluation_in') THEN sm.target_shelf_id
+          WHEN sm.movement_type IN ('roll_in','evaluation_in','central_in') THEN sm.target_shelf_id
           ELSE sm.source_shelf_id
         END
-        WHERE sh.shelf_type IN ('main','evaluation')
+        WHERE sh.shelf_type IN ('regulation','main','evaluation')
         GROUP BY sh.shelf_code, sh.shelf_type
         HAVING SUM(sm.meter) > 0
         ORDER BY sh.shelf_type, remaining_meter DESC

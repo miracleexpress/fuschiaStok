@@ -50,8 +50,9 @@
 <!-- HIZLI İŞLEMLER -->
 <div class="quick-actions mb-3">
   <a href="/roll-entry"          class="qa-btn primary"><span class="qa-icon">&#8679;</span>Rulo Girişi</a>
+  <a href="/regulation-transfer" class="qa-btn"><span class="qa-icon">&#128230;</span>Merkez Depoya Aktar</a>
   <a href="/cutting-entry"       class="qa-btn success"><span class="qa-icon">&#9986;</span>Kesim / Sarf</a>
-  <a href="/reports/roll-stock"  class="qa-btn"><span class="qa-icon">&#128230;</span>Rulo Stok</a>
+  <a href="/reports/roll-stock"  class="qa-btn"><span class="qa-icon">&#128230;</span>Stok</a>
   <a href="/reports/movements"   class="qa-btn"><span class="qa-icon">&#128257;</span>Hareketler</a>
 </div>
 
@@ -75,6 +76,8 @@
           <tr>
             <td data-label="Tip">
               <% if(r.movement_type==='roll_in'){%><span class="badge badge-green">Giriş</span>
+              <%}else if(r.movement_type==='regulation_out'){%><span class="badge badge-gray">Regüle Çıkış</span>
+              <%}else if(r.movement_type==='central_in'){%><span class="badge badge-green">Merkez Girişi</span>
               <%}else if(r.movement_type==='sales_out'){%><span class="badge badge-blue">Satış</span>
               <%}else if(r.movement_type==='fire_out'){%><span class="badge badge-red">Fire</span>
               <%}else if(r.movement_type==='evaluation_in'){%><span class="badge badge-yellow">Değer.↓</span>

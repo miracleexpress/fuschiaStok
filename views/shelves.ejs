@@ -25,7 +25,8 @@
         <label class="form-label">Raf Tipi <span class="req">*</span></label>
         <select name="shelf_type" required>
           <option value="">— Seç —</option>
-          <option value="main">&#127970; Ana Raf (1-A … 8-F)</option>
+          <option value="regulation">&#128230; Regüle Depo (R-1 …)</option>
+          <option value="main">&#127970; Merkez Depo (1-A … 8-F)</option>
           <option value="evaluation">&#128195; Değerlendirme (D-1A …)</option>
           <option value="system">&#9881; Sistem Alanı (SATIŞ, FİRE)</option>
         </select>
@@ -39,13 +40,33 @@
 <div class="card">
   <div class="card-title">Raf Listesi (<%= shelves.length %>)</div>
   <%
+    const regShelves   = shelves.filter(s => s.shelf_type==='regulation');
     const mainShelves  = shelves.filter(s => s.shelf_type==='main');
     const evalShelves  = shelves.filter(s => s.shelf_type==='evaluation');
     const sysShelves   = shelves.filter(s => s.shelf_type==='system');
   %>
 
+  <% if (regShelves.length) { %>
+  <div class="section-title">&#128230; Regüle Depo Rafları (<%= regShelves.length %>)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    <% regShelves.forEach(s => { %>
+    <div style="display:inline-flex;align-items:center;gap:6px;
+                background:<%=s.is_active?'#f0fdf4':'#fef2f2'%>;
+                border:1px solid <%=s.is_active?'#86efac':'#fca5a5'%>;
+                border-radius:6px;padding:6px 12px;font-size:.88rem">
+      <span class="fw-bold"><%= s.shelf_code %></span>
+      <form action="/shelves/<%= s.id %>/toggle" method="POST" style="margin:0">
+        <button type="submit" class="btn btn-secondary btn-sm" style="padding:2px 8px;min-height:26px;font-size:.75rem">
+          <%=s.is_active?'Pasif':'Aktif'%>
+        </button>
+      </form>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
   <% if (mainShelves.length) { %>
-  <div class="section-title">&#127970; Ana Rulo Rafları (<%= mainShelves.length %>)</div>
+  <div class="section-title">&#127970; Merkez Depo Rafları (<%= mainShelves.length %>)</div>
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
     <% mainShelves.forEach(s => { %>
     <div style="display:inline-flex;align-items:center;gap:6px;

@@ -19,8 +19,9 @@ Fuschia / Etullen toptan perde işletmesi için Node.js + Express + PostgreSQL s
 
 ## Özellikler
 
-- Rulo girişi: ürün kodu + lot/barkod (Jalpersan barkodu) + metre
-- Kesim/Sarf: Satış, Fire, Değerlendirme (ana veya değerlendirme rafından)
+- Rulo girişi: ürün kodu + lot/barkod (Jalpersan barkodu) + metre → **Regüle Depo**'ya girer
+- Merkez Depoya Aktar: lot kodu okutularak regüle depodaki mal merkez depo rafına taşınır
+- Kesim/Sarf: Satış, Fire, Değerlendirme (merkez veya değerlendirme rafından — regüle depodan kesim yapılamaz)
 - Değerlendirme rafı stoğu kesim/satışta kullanılabilir
 - Stok negatife düşme engelidir (concurrent lock koruması)
 - Tüm raporlar CSV olarak indirilebilir
@@ -199,7 +200,7 @@ Web Service → **Settings** → **Custom Domains**
 
 1. Admin ile giriş
 2. **Kullanıcılar** → admin ve depo şifrelerini değiştir
-3. **Raflar** → Mevcut rafları kontrol et (48 ana, 6 değerlendirme, 2 sistem)
+3. **Raflar** → Mevcut rafları kontrol et (10 regüle depo, 48 merkez depo, 6 değerlendirme, 2 sistem)
 4. **Rulo Girişi** → İlk test rulosunu kaydet
 5. **Kesim** → Test kesimi yap
 
@@ -207,17 +208,30 @@ Web Service → **Settings** → **Custom Domains**
 
 ## Hareket Akışı
 
+### Depo akışı
+
+```
+Regüle Depo  →  Merkez Depo  →  (Kesim/Sarf: Satış / Fire / Değerlendirme)
+  (roll_in)     (lot okutularak       (sadece Merkez veya Değerlendirme
+                 "Merkez Depoya        rafından yapılabilir — Regüle
+                 Aktar" ile)           depodan doğrudan kesim yapılamaz)
+```
+
 ### Stok hareketi tiplerine göre muhasebe
 
 ```
 movement_type   | meter | source_shelf | target_shelf
 ────────────────┼───────┼──────────────┼──────────────────
-roll_in         |  +    | NULL         | Ana raf
+roll_in         |  +    | NULL         | Regüle depo rafı
+regulation_out  |  -    | Regüle rafı  | NULL
+central_in      |  +    | NULL         | Merkez depo rafı
 evaluation_in   |  +    | Kaynak raf   | Değerlendirme rafı
 sales_out       |  -    | Kaynak raf   | SATIŞ (sistem)
 fire_out        |  -    | Kaynak raf   | FİRE (sistem)
-evaluation_out  |  -    | Ana raf      | Değerlendirme rafı
+evaluation_out  |  -    | Merkez raf   | Değerlendirme rafı
 ```
+
+`regulation_out` + `central_in` birbirini götürür (transfer, net stok değişmez) — tıpkı `evaluation_out`/`evaluation_in` gibi.
 
 ### "Değerlendirme rafına al" işlemi
 
@@ -347,6 +361,15 @@ Render Free tier 15dk hareketsizlikte uyur. İlk istek 30-60sn alabilir. Cron il
 psql $DATABASE_URL -f db/migrate_001.sql
 ```
 
+### Mevcut DB'ye migration (Regüle Depo eklemek için)
+
+```bash
+# Render Shell veya lokal psql:
+psql $DATABASE_URL -f db/migrate_002.sql
+```
+
+Bu migration'dan sonra **Raflar** sayfasından en az bir tane "Regüle Depo" tipinde raf eklemeniz gerekir — Rulo Girişi artık bu rafları listeler. Mevcut "main" tipi raflarınız aynı kalır, sadece arayüzde "Merkez Depo" olarak gösterilir.
+
 ---
 
 ## Veritabanı Komutları
@@ -369,17 +392,19 @@ fuschia-stock-panel/
 │   ├── pool.js            # pg.Pool, SSL
 │   ├── schema.sql         # Tablolar + view'lar
 │   ├── seed.js            # Node.js seed (bcrypt)
-│   └── migrate_001.sql    # evaluation_in geçişi
+│   ├── migrate_001.sql    # evaluation_in geçişi
+│   └── migrate_002.sql    # Regüle Depo geçişi
 ├── middleware/
 │   └── auth.js            # requireLogin, requireAdmin
 ├── routes/
 │   ├── auth.js
 │   ├── dashboard.js
 │   ├── rollEntries.js
+│   ├── regulationTransfer.js # Regüle → Merkez Depo transferi
 │   ├── cuttingEntries.js  # evaluation_in hareketi burada yazılır
 │   ├── reports.js
 │   ├── exports.js         # CSV indirme
-│   ├── api.js             # /api/lots, /api/lot-stock, /api/check-lot
+│   ├── api.js             # /api/lots, /api/lot-lookup, /api/lot-stock, /api/check-lot
 │   ├── products.js
 │   ├── shelves.js
 │   └── users.js

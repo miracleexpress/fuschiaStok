@@ -109,6 +109,11 @@ router.post('/', async (req, res) => {
     );
     const srcShelfType = srcShelfRes.rows[0]?.shelf_type;
 
+    if (srcShelfType === 'regulation') {
+      await client.query('ROLLBACK');
+      return loadForm('Regüle depodan doğrudan kesim/sarf yapılamaz. Önce "Merkez Depoya Aktar" ile merkez depoya aktarın.');
+    }
+
     // ── Aynı ürün için serialization kilidi ────────────────────────────────
     await client.query('SELECT pg_advisory_xact_lock($1)', [productId]);
 

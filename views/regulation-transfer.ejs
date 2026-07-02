@@ -1,0 +1,252 @@
+<%- include('_header') %>
+
+<div class="page-header">
+  <h1 class="page-title">&#128230; Merkez Depoya Aktar</h1>
+  <span class="fs-sm text-muted">Regüle depodaki bir lotu, lot kodunu okutarak merkez depo rafına aktarın.</span>
+</div>
+
+<% if (success) { %>
+<div class="alert alert-success">
+  <span class="alert-icon">&#10003;</span>
+  <span>Transfer başarıyla kaydedildi!</span>
+</div>
+<% } %>
+<% if (error) { %>
+<div class="alert alert-danger">
+  <span class="alert-icon">&#9888;</span>
+  <span><%= error %></span>
+</div>
+<% } %>
+
+<div class="card">
+  <form action="/regulation-transfer" method="POST" id="transferForm">
+
+    <!-- LOT / BARKOD -->
+    <div class="form-group">
+      <label class="form-label" for="lot_barcode">Lot / Barkod <span class="req">*</span></label>
+      <input type="text" id="lot_barcode" name="lot_barcode" required
+             autofocus
+             placeholder="Jalpersan barkodunu okutun veya yazın"
+             value="<%= formData.lot_barcode || '' %>"
+             autocomplete="off"
+             inputmode="text"
+             style="font-size:1.05rem;font-family:monospace">
+      <div class="form-hint" id="lotHint">Lot barkodunu girin — ürün kodu ve regüle depo rafı otomatik dolacak.</div>
+    </div>
+
+    <!-- ÜRÜN KODU / KAYNAK RAF (otomatik doldurulur) -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="product_code">Ürün Kodu</label>
+        <input type="text" id="product_code" name="product_code" readonly required
+               placeholder="— Lot girilince dolar —"
+               value="<%= formData.product_code || '' %>"
+               style="font-size:1.1rem;font-weight:700;background:#f3f4f6">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="source_shelf_id">Regüle Depo Rafı <span class="req">*</span></label>
+        <select id="source_shelf_id" name="source_shelf_id" required disabled>
+          <option value="">— Lot girilince dolar —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- KALAN METRE -->
+    <div class="form-group" id="remainingGroup" style="display:none">
+      <label class="form-label">Regüle Depoda Kalan</label>
+      <div class="stock-info-box" id="remainingBox">—</div>
+    </div>
+
+    <!-- HEDEF RAF / METRE -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="target_shelf_id">Hedef Merkez Depo Rafı <span class="req">*</span></label>
+        <select id="target_shelf_id" name="target_shelf_id" required>
+          <option value="">— Raf Seç —</option>
+          <% targetShelves.forEach(s => { %>
+          <option value="<%= s.id %>" <%=formData.target_shelf_id==s.id?'selected':''%>>
+            <%= s.shelf_code %>
+          </option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="meter">Aktarılacak Metre <span class="req">*</span></label>
+        <input type="number" id="meter" name="meter" required
+               min="0.01" step="0.01" placeholder="0.00"
+               inputmode="decimal"
+               value="<%= formData.meter || '' %>">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="transfer_date">Tarih <span class="req">*</span></label>
+      <input type="date" id="transfer_date" name="transfer_date" required
+             value="<%= formData.transfer_date || new Date().toISOString().split('T')[0] %>">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="note">Not (isteğe bağlı)</label>
+      <input type="text" id="note" name="note"
+             placeholder="Açıklama varsa yazın"
+             value="<%= formData.note || '' %>">
+    </div>
+
+    <div class="btn-group mt-2">
+      <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" style="flex:1" disabled>
+        &#128230; Merkez Depoya Aktar
+      </button>
+      <a href="/" class="btn btn-secondary btn-lg">İptal</a>
+    </div>
+  </form>
+</div>
+
+<!-- SON TRANSFERLER -->
+<% if (recent && recent.length) { %>
+<div class="card mt-3">
+  <div class="card-title">Son Transferler</div>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th><th>Ürün</th><th>Lot</th>
+          <th>Kaynak (Regüle)</th><th>Hedef (Merkez)</th><th>Metre</th><th>Kaydeden</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% recent.forEach(r => { %>
+        <tr>
+          <td data-label="Tarih"><%= new Date(r.transfer_date).toLocaleDateString('tr-TR') %></td>
+          <td data-label="Ürün" class="fw-bold"><%= r.product_code %></td>
+          <td data-label="Lot"  style="font-family:monospace;font-size:.85rem"><%= r.lot_barcode %></td>
+          <td data-label="Kaynak"><span class="badge badge-gray"><%= r.source_shelf %></span></td>
+          <td data-label="Hedef"><span class="badge badge-gray"><%= r.target_shelf %></span></td>
+          <td data-label="Metre" class="fw-bold text-success"><%= Number(r.meter).toFixed(2) %> m</td>
+          <td data-label="Kaydeden" class="fs-sm text-muted"><%= r.created_by %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<script>
+const lotInput     = document.getElementById('lot_barcode');
+const productInput = document.getElementById('product_code');
+const shelfSel     = document.getElementById('source_shelf_id');
+const remainGrp    = document.getElementById('remainingGroup');
+const remainBox    = document.getElementById('remainingBox');
+const targetSel    = document.getElementById('target_shelf_id');
+const meterInput   = document.getElementById('meter');
+const submitBtn    = document.getElementById('submitBtn');
+const lotHint      = document.getElementById('lotHint');
+
+let currentRemaining = 0;
+
+let lotTimer = null;
+lotInput.addEventListener('input', () => {
+  clearTimeout(lotTimer);
+  lotTimer = setTimeout(lookupLot, 500);
+});
+lotInput.addEventListener('blur', lookupLot);
+
+async function lookupLot() {
+  const lot = lotInput.value.trim();
+  if (!lot) { resetAll(); return; }
+  shelfSel.disabled = true;
+  shelfSel.innerHTML = '<option value="">Yükleniyor... &#9203;</option>';
+  resetRemaining();
+  try {
+    const res  = await fetch('/api/lot-lookup?shelf_types=regulation&lot_barcode=' + encodeURIComponent(lot));
+    const data = await res.json();
+    if (data.status !== 'ok') {
+      productInput.value = '';
+      shelfSel.innerHTML = '<option value="">Regüle depoda bu lot bulunamadı</option>';
+      lotHint.textContent = 'Bu lot regüle depoda yok. Önce Rulo Girişi yapın ya da lot kodunu kontrol edin.';
+      lotHint.style.color = '#b91c1c';
+      updateSubmitState();
+      return;
+    }
+    productInput.value = data.product_code;
+    shelfSel.innerHTML = '<option value="">— Raf Seç —</option>';
+    data.shelves.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.shelf_id;
+      opt.dataset.remaining = s.remaining_meter;
+      opt.textContent = `${s.shelf_code} (kalan: ${Number(s.remaining_meter).toFixed(2)} m)`;
+      shelfSel.appendChild(opt);
+    });
+    shelfSel.disabled = false;
+    lotHint.textContent = data.shelves.length + ' regüle rafında stok bulundu.';
+    lotHint.style.color = '';
+    if (data.shelves.length === 1) {
+      shelfSel.selectedIndex = 1;
+      shelfSel.dispatchEvent(new Event('change'));
+    }
+  } catch (e) {
+    shelfSel.innerHTML = '<option value="">Hata oluştu</option>';
+  }
+  updateSubmitState();
+}
+
+shelfSel.addEventListener('change', () => {
+  const opt = shelfSel.options[shelfSel.selectedIndex];
+  if (!opt || !opt.value) { resetRemaining(); updateSubmitState(); return; }
+  currentRemaining = parseFloat(opt.dataset.remaining) || 0;
+  updateRemainingBox(currentRemaining);
+  remainGrp.style.display = 'block';
+  if (!meterInput.value) meterInput.value = currentRemaining.toFixed(2);
+  updateSubmitState();
+});
+
+function resetAll() {
+  productInput.value = '';
+  shelfSel.innerHTML = '<option value="">— Lot girilince dolar —</option>';
+  shelfSel.disabled = true;
+  lotHint.textContent = 'Lot barkodunu girin — ürün kodu ve regüle depo rafı otomatik dolacak.';
+  lotHint.style.color = '';
+  resetRemaining();
+  updateSubmitState();
+}
+
+function resetRemaining() {
+  currentRemaining = 0;
+  remainGrp.style.display = 'none';
+  remainBox.textContent = '—';
+  remainBox.className = 'stock-info-box';
+}
+
+function updateRemainingBox(val) {
+  remainBox.textContent = val.toFixed(2) + ' m kalan';
+  if (val <= 0)   remainBox.className = 'stock-info-box empty';
+  else if (val < 10) remainBox.className = 'stock-info-box low';
+  else               remainBox.className = 'stock-info-box has-value';
+}
+
+meterInput.addEventListener('input', updateSubmitState);
+targetSel.addEventListener('change', updateSubmitState);
+
+function updateSubmitState() {
+  const hasProduct = productInput.value.trim();
+  const hasLot     = lotInput.value.trim();
+  const hasShelf   = shelfSel.value;
+  const hasTarget  = targetSel.value;
+  const m          = parseFloat(meterInput.value) || 0;
+  const hasMeter   = m > 0;
+  const stockOk    = currentRemaining <= 0 || m <= currentRemaining;
+
+  const ok = hasProduct && hasLot && hasShelf && hasTarget && hasMeter && stockOk;
+  submitBtn.disabled = !ok;
+  if (hasMeter && !stockOk) {
+    submitBtn.textContent = '⚠ Stok Yetersiz — Aktarılamaz';
+  } else {
+    submitBtn.textContent = '📦 Merkez Depoya Aktar';
+  }
+}
+
+if (lotInput.value) lookupLot();
+</script>
+
+<%- include('_footer') %>

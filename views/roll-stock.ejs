@@ -1,7 +1,7 @@
 <%- include('_header') %>
 
 <div class="page-header">
-  <h1 class="page-title">&#128230; Rulo Stok</h1>
+  <h1 class="page-title">&#128230; Stok</h1>
 </div>
 
 <div class="filter-bar">
@@ -36,57 +36,37 @@
   </form>
 </div>
 
-<% if (!rows.length) { %>
-<div class="card">
-  <div class="empty-state"><span class="es-icon">&#128230;</span>Stok kaydı bulunamadı.</div>
-</div>
-<% } else { %>
-
 <%
-  let totalIn=0, totalOut=0, totalRem=0;
-  rows.forEach(r => {
-    totalIn  += parseFloat(r.total_in_meter  || 0);
-    totalOut += parseFloat(r.total_out_meter || 0);
-    totalRem += parseFloat(r.remaining_meter || 0);
-  });
+  function renderStockTable(rows) {
+    let totalIn=0, totalOut=0, totalRem=0;
+    rows.forEach(r => {
+      totalIn  += parseFloat(r.total_in_meter  || 0);
+      totalOut += parseFloat(r.total_out_meter || 0);
+      totalRem += parseFloat(r.remaining_meter || 0);
+    });
+    return { totalIn, totalOut, totalRem };
+  }
+  const regTotals  = renderStockTable(regulationRows);
+  const mainTotals = renderStockTable(mainRows);
+  const evalTotals = renderStockTable(evalRows);
 %>
 
-<!-- ÖZET -->
-<div class="stat-grid mb-3">
-  <div class="stat-card">
-    <span class="stat-value"><%= rows.length %></span>
-    <span class="stat-label">Lot/Raf Kaydı</span>
-  </div>
-  <div class="stat-card success">
-    <span class="stat-value"><%= totalRem.toFixed(2) %></span>
-    <span class="stat-label">Toplam Kalan (m)</span>
-  </div>
-  <div class="stat-card">
-    <span class="stat-value"><%= totalIn.toFixed(2) %></span>
-    <span class="stat-label">Toplam Giriş (m)</span>
-  </div>
-  <div class="stat-card danger">
-    <span class="stat-value"><%= totalOut.toFixed(2) %></span>
-    <span class="stat-label">Toplam Çıkış (m)</span>
-  </div>
-</div>
-
-<div class="card">
+<!-- REGÜLE DEPO -->
+<div class="card mb-3">
+  <div class="card-title">&#128230; Regüle Depo (<%= regulationRows.length %>)</div>
+  <% if (!regulationRows.length) { %>
+  <div class="empty-state"><span class="es-icon">&#128230;</span>Regüle depoda stok kaydı bulunamadı.</div>
+  <% } else { %>
   <div class="table-wrap resp-table">
     <table>
       <thead>
         <tr>
-          <th>Ürün Kodu</th>
-          <th>Ürün Adı</th>
-          <th>Lot / Barkod</th>
-          <th>Raf</th>
-          <th style="text-align:right">Giriş (m)</th>
-          <th style="text-align:right">Çıkış (m)</th>
-          <th style="text-align:right">Kalan (m)</th>
+          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Raf</th>
+          <th style="text-align:right">Giriş (m)</th><th style="text-align:right">Çıkış (m)</th><th style="text-align:right">Kalan (m)</th>
         </tr>
       </thead>
       <tbody>
-        <% rows.forEach(r => { %>
+        <% regulationRows.forEach(r => { %>
         <tr>
           <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
           <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
@@ -100,15 +80,95 @@
       </tbody>
       <tfoot>
         <tr class="tfoot-total">
-          <td colspan="4">TOPLAM (<%= rows.length %> kayıt)</td>
-          <td class="text-success" style="text-align:right"><%= totalIn.toFixed(2) %></td>
-          <td class="text-danger"  style="text-align:right"><%= totalOut.toFixed(2) %></td>
-          <td class="fw-black"     style="text-align:right"><%= totalRem.toFixed(2) %></td>
+          <td colspan="4">TOPLAM (<%= regulationRows.length %> kayıt)</td>
+          <td class="text-success" style="text-align:right"><%= regTotals.totalIn.toFixed(2) %></td>
+          <td class="text-danger"  style="text-align:right"><%= regTotals.totalOut.toFixed(2) %></td>
+          <td class="fw-black"     style="text-align:right"><%= regTotals.totalRem.toFixed(2) %></td>
         </tr>
       </tfoot>
     </table>
   </div>
+  <% } %>
 </div>
-<% } %>
+
+<!-- MERKEZ DEPO -->
+<div class="card mb-3">
+  <div class="card-title">&#127970; Merkez Depo (<%= mainRows.length %>)</div>
+  <% if (!mainRows.length) { %>
+  <div class="empty-state"><span class="es-icon">&#127970;</span>Merkez depoda stok kaydı bulunamadı.</div>
+  <% } else { %>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Raf</th>
+          <th style="text-align:right">Giriş (m)</th><th style="text-align:right">Çıkış (m)</th><th style="text-align:right">Kalan (m)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% mainRows.forEach(r => { %>
+        <tr>
+          <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
+          <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
+          <td data-label="Lot" style="font-family:monospace;font-size:.88rem"><%= r.lot_barcode %></td>
+          <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
+          <td data-label="Giriş (m)"  class="text-success" style="text-align:right"><%= Number(r.total_in_meter).toFixed(2) %></td>
+          <td data-label="Çıkış (m)"  class="text-danger"  style="text-align:right"><%= Number(r.total_out_meter).toFixed(2) %></td>
+          <td data-label="Kalan (m)"  class="fw-black fs-lg" style="text-align:right"><%= Number(r.remaining_meter).toFixed(2) %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr class="tfoot-total">
+          <td colspan="4">TOPLAM (<%= mainRows.length %> kayıt)</td>
+          <td class="text-success" style="text-align:right"><%= mainTotals.totalIn.toFixed(2) %></td>
+          <td class="text-danger"  style="text-align:right"><%= mainTotals.totalOut.toFixed(2) %></td>
+          <td class="fw-black"     style="text-align:right"><%= mainTotals.totalRem.toFixed(2) %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<!-- DEĞERLENDİRME -->
+<div class="card mb-3">
+  <div class="card-title">&#128195; Değerlendirme (<%= evalRows.length %>)</div>
+  <% if (!evalRows.length) { %>
+  <div class="empty-state"><span class="es-icon">&#128195;</span>Değerlendirme rafında stok kaydı bulunamadı.</div>
+  <% } else { %>
+  <div class="table-wrap resp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Raf</th>
+          <th style="text-align:right">Giriş (m)</th><th style="text-align:right">Çıkış (m)</th><th style="text-align:right">Kalan (m)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% evalRows.forEach(r => { %>
+        <tr>
+          <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
+          <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
+          <td data-label="Lot" style="font-family:monospace;font-size:.88rem"><%= r.lot_barcode %></td>
+          <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
+          <td data-label="Giriş (m)"  class="text-success" style="text-align:right"><%= Number(r.total_in_meter).toFixed(2) %></td>
+          <td data-label="Çıkış (m)"  class="text-danger"  style="text-align:right"><%= Number(r.total_out_meter).toFixed(2) %></td>
+          <td data-label="Kalan (m)"  class="fw-black fs-lg" style="text-align:right"><%= Number(r.remaining_meter).toFixed(2) %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr class="tfoot-total">
+          <td colspan="4">TOPLAM (<%= evalRows.length %> kayıt)</td>
+          <td class="text-success" style="text-align:right"><%= evalTotals.totalIn.toFixed(2) %></td>
+          <td class="text-danger"  style="text-align:right"><%= evalTotals.totalOut.toFixed(2) %></td>
+          <td class="fw-black"     style="text-align:right"><%= evalTotals.totalRem.toFixed(2) %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <% } %>
+</div>
 
 <%- include('_footer') %>

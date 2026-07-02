@@ -46,8 +46,8 @@ async function getRemainingMeter(pool, productId, lotBarcode, shelfId) {
      FROM stock_movements
      WHERE product_id = $1 AND lot_barcode = $2
        AND (
-             (movement_type IN ('roll_in','evaluation_in') AND target_shelf_id = $3)
-          OR (movement_type NOT IN ('roll_in','evaluation_in') AND source_shelf_id = $3)
+             (movement_type IN ('roll_in','evaluation_in','central_in') AND target_shelf_id = $3)
+          OR (movement_type NOT IN ('roll_in','evaluation_in','central_in') AND source_shelf_id = $3)
            )`,
     [productId, lotBarcode, shelfId]
   );
@@ -63,8 +63,8 @@ async function getRemainingMeterTx(client, productId, lotBarcode, shelfId) {
      FROM stock_movements
      WHERE product_id = $1 AND lot_barcode = $2
        AND (
-             (movement_type IN ('roll_in','evaluation_in') AND target_shelf_id = $3)
-          OR (movement_type NOT IN ('roll_in','evaluation_in') AND source_shelf_id = $3)
+             (movement_type IN ('roll_in','evaluation_in','central_in') AND target_shelf_id = $3)
+          OR (movement_type NOT IN ('roll_in','evaluation_in','central_in') AND source_shelf_id = $3)
            )`,
     [productId, lotBarcode, shelfId]
   );

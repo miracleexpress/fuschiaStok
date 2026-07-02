@@ -2,9 +2,10 @@
 -- PostgreSQL 14+
 -- UYARI: DROP TABLE kullanıyor — mevcut production DB için db/migrate_001.sql kullan.
 
-DROP TABLE IF EXISTS audit_logs        CASCADE;
-DROP TABLE IF EXISTS evaluation_pieces CASCADE;
-DROP TABLE IF EXISTS stock_movements   CASCADE;
+DROP TABLE IF EXISTS audit_logs          CASCADE;
+DROP TABLE IF EXISTS regulation_transfers CASCADE;
+DROP TABLE IF EXISTS evaluation_pieces   CASCADE;
+DROP TABLE IF EXISTS stock_movements     CASCADE;
 DROP TABLE IF EXISTS cutting_entries   CASCADE;
 DROP TABLE IF EXISTS roll_entries      CASCADE;
 DROP TABLE IF EXISTS shelves           CASCADE;
@@ -42,7 +43,7 @@ CREATE TABLE products (
 CREATE TABLE shelves (
   id          SERIAL PRIMARY KEY,
   shelf_code  VARCHAR(20)  UNIQUE NOT NULL,
-  shelf_type  VARCHAR(20)  NOT NULL CHECK (shelf_type IN ('main','evaluation','system')),
+  shelf_type  VARCHAR(20)  NOT NULL CHECK (shelf_type IN ('main','evaluation','system','regulation')),
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
@@ -86,12 +87,15 @@ CREATE TABLE cutting_entries (
 --
 --  movement_type   | meter | source_shelf | target_shelf
 --  ─────────────────────────────────────────────────────
---  roll_in         |  +    | NULL         | ana raf
---  evaluation_in   |  +    | kaynak raf   | değer. rafı   ← eval rafa GİRİŞ
+--  roll_in         |  +    | NULL         | regüle depo rafı  ← ilk giriş regüle depoya
+--  regulation_out  |  -    | regüle rafı  | NULL              ← regüle depodan çıkış
+--  central_in      |  +    | NULL         | merkez depo rafı  ← merkez depoya giriş
+--  evaluation_in   |  +    | kaynak raf   | değer. rafı       ← eval rafa GİRİŞ
 --  sales_out       |  -    | kaynak raf   | SATIŞ sistemi
 --  fire_out        |  -    | kaynak raf   | FİRE sistemi
---  evaluation_out  |  -    | ana raf      | değer. rafı   ← ana raftan ÇIKIŞ
+--  evaluation_out  |  -    | ana (merkez) raf | değer. rafı   ← merkez raftan ÇIKIŞ
 --
+--  regulation_out + central_in birbirini götürür; net stok değişmez (transfer).
 --  evaluation_out + evaluation_in birbirini götürür; net stok değişmez.
 --  Gerçek çıkış: sales_out ve fire_out.
 -- ─────────────────────────────────────────────
@@ -99,7 +103,7 @@ CREATE TABLE stock_movements (
   id              SERIAL PRIMARY KEY,
   movement_date   DATE          NOT NULL DEFAULT CURRENT_DATE,
   movement_type   VARCHAR(30)   NOT NULL CHECK (
-    movement_type IN ('roll_in','sales_out','fire_out','evaluation_out','evaluation_in')
+    movement_type IN ('roll_in','sales_out','fire_out','evaluation_out','evaluation_in','regulation_out','central_in')
   ),
   product_id      INTEGER       NOT NULL REFERENCES products(id),
   lot_barcode     VARCHAR(100)  NOT NULL,
@@ -136,6 +140,22 @@ CREATE TABLE evaluation_pieces (
 );
 
 -- ─────────────────────────────────────────────
+-- 7b. REGÜLE → MERKEZ DEPO TRANSFERLERİ
+-- ─────────────────────────────────────────────
+CREATE TABLE regulation_transfers (
+  id               SERIAL PRIMARY KEY,
+  transfer_date    DATE          NOT NULL DEFAULT CURRENT_DATE,
+  product_id       INTEGER       NOT NULL REFERENCES products(id),
+  lot_barcode      VARCHAR(100)  NOT NULL,
+  source_shelf_id  INTEGER       NOT NULL REFERENCES shelves(id),
+  target_shelf_id  INTEGER       NOT NULL REFERENCES shelves(id),
+  meter            NUMERIC(12,2) NOT NULL CHECK (meter > 0),
+  note             TEXT,
+  created_by       INTEGER       NOT NULL REFERENCES users(id),
+  created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+-- ─────────────────────────────────────────────
 -- 8. DENETİM KAYITLARI
 -- ─────────────────────────────────────────────
 CREATE TABLE audit_logs (
@@ -166,14 +186,16 @@ CREATE INDEX idx_sm_source_shelf      ON stock_movements(source_shelf_id);
 CREATE INDEX idx_sm_target_shelf      ON stock_movements(target_shelf_id);
 CREATE INDEX idx_eval_product         ON evaluation_pieces(product_id);
 CREATE INDEX idx_eval_status          ON evaluation_pieces(status);
+CREATE INDEX idx_regtransfer_product  ON regulation_transfers(product_id);
+CREATE INDEX idx_regtransfer_lot      ON regulation_transfers(lot_barcode);
 CREATE INDEX idx_audit_user           ON audit_logs(user_id);
 CREATE INDEX idx_audit_table          ON audit_logs(table_name, record_id);
 
 -- ─────────────────────────────────────────────
--- VIEW: RULO & DEĞERLENDİRME RAF STOĞU
+-- VIEW: RULO & DEĞERLENDİRME RAF STOĞU (regüle + merkez + değerlendirme)
 --
--- roll_in / evaluation_in → hedef raf (girişler)
--- diğerleri               → kaynak raf (çıkışlar)
+-- roll_in / evaluation_in / central_in → hedef raf (girişler)
+-- diğerleri                            → kaynak raf (çıkışlar)
 -- ─────────────────────────────────────────────
 CREATE OR REPLACE VIEW v_roll_stock AS
 SELECT
@@ -189,10 +211,10 @@ SELECT
 FROM stock_movements sm
 JOIN products p ON p.id = sm.product_id
 JOIN shelves sh ON sh.id = CASE
-  WHEN sm.movement_type IN ('roll_in','evaluation_in') THEN sm.target_shelf_id
+  WHEN sm.movement_type IN ('roll_in','evaluation_in','central_in') THEN sm.target_shelf_id
   ELSE sm.source_shelf_id
 END
-WHERE sh.shelf_type IN ('main','evaluation')
+WHERE sh.shelf_type IN ('main','evaluation','regulation')
 GROUP BY p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.id, sh.shelf_type
 HAVING SUM(sm.meter) > 0
 ORDER BY p.product_code, sm.lot_barcode, sh.shelf_code;

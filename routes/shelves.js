@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
   };
 
   if (!shelf_code || !shelf_type) return loadPage('Raf kodu ve tipi zorunludur.');
-  if (!['main','evaluation','system'].includes(shelf_type)) return loadPage('Geçersiz raf tipi.');
+  if (!['main','evaluation','system','regulation'].includes(shelf_type)) return loadPage('Geçersiz raf tipi.');
 
   try {
     await pool.query(

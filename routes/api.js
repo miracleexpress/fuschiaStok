@@ -25,8 +25,11 @@ router.get('/lots', async (req, res) => {
 // Lot barkoduna göre ürün kodu + stokta kalan raf kombinasyonları
 // Yanıt: { status: 'ok', product_code, shelves: [...] } veya { status: 'not_found' }
 router.get('/lot-lookup', async (req, res) => {
-  const { lot_barcode } = req.query;
+  const { lot_barcode, shelf_types } = req.query;
   if (!lot_barcode) return res.json({ status: 'not_found' });
+  const types = shelf_types
+    ? shelf_types.split(',').map(t => t.trim()).filter(Boolean)
+    : ['main', 'evaluation'];
   try {
     const { rows } = await pool.query(
       `SELECT
@@ -38,15 +41,15 @@ router.get('/lot-lookup', async (req, res) => {
        FROM stock_movements sm
        JOIN products p  ON p.id  = sm.product_id
        JOIN shelves  sh ON sh.id = CASE
-         WHEN sm.movement_type IN ('roll_in','evaluation_in') THEN sm.target_shelf_id
+         WHEN sm.movement_type IN ('roll_in','evaluation_in','central_in') THEN sm.target_shelf_id
          ELSE sm.source_shelf_id
        END
        WHERE sm.lot_barcode = $1
-         AND sh.shelf_type IN ('main', 'evaluation')
+         AND sh.shelf_type = ANY($2::text[])
        GROUP BY p.product_code, sh.id, sh.shelf_code, sh.shelf_type
        HAVING SUM(sm.meter) > 0
        ORDER BY sh.shelf_code`,
-      [lot_barcode.trim()]
+      [lot_barcode.trim(), types]
     );
     if (!rows.length) return res.json({ status: 'not_found' });
     res.json({ status: 'ok', product_code: rows[0].product_code, shelves: rows });
