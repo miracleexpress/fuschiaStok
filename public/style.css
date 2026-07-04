@@ -703,6 +703,64 @@ tbody tr:last-child td { border-bottom: none; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ═══════════════════════════════════════════════════════════════
+   BARKOD TARAMA — kamera ile lot barkodu okutma
+   ═══════════════════════════════════════════════════════════════ */
+.barcode-input-wrap { position: relative; }
+.barcode-input-wrap input { padding-right: 52px; }
+.barcode-scan-btn {
+  position: absolute;
+  top: 50%; right: 6px;
+  transform: translateY(-50%);
+  width: 40px; height: 40px;
+  min-height: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary-l);
+  color: var(--primary);
+  font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.barcode-scan-btn:active { background: var(--primary); color: #fff; }
+
+.barcode-scan-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 500;
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.barcode-scan-modal.open { display: flex; }
+.barcode-scan-box {
+  background: #fff;
+  border-radius: var(--radius);
+  width: 100%; max-width: 420px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.barcode-scan-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-l);
+}
+.barcode-scan-close {
+  border: none; background: none;
+  font-size: 1.4rem; line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+#barcodeScanReader { width: 100%; background: #000; }
+.barcode-scan-hint {
+  padding: 10px 16px;
+  font-size: .85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 /* Modal-style confirm dialog (inline) */
 .confirm-block {
   background: var(--warning-l);

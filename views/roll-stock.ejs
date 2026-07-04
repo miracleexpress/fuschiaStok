@@ -13,7 +13,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Lot / Barkod</label>
-      <input type="text" name="lot_barcode" placeholder="JAL-..."
+      <input type="text" name="lot_barcode" data-barcode-scan placeholder="JAL-..."
              value="<%= filter.lot_barcode||'' %>">
     </div>
     <div class="form-group">
@@ -170,5 +170,8 @@
   </div>
   <% } %>
 </div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/barcode-scanner.js"></script>
 
 <%- include('_footer') %>

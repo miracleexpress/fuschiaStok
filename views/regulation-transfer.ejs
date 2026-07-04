@@ -26,6 +26,7 @@
       <label class="form-label" for="lot_barcode">Lot / Barkod <span class="req">*</span></label>
       <input type="text" id="lot_barcode" name="lot_barcode" required
              autofocus
+             data-barcode-scan
              placeholder="Jalpersan barkodunu okutun veya yazın"
              value="<%= formData.lot_barcode || '' %>"
              autocomplete="off"
@@ -248,5 +249,8 @@ function updateSubmitState() {
 
 if (lotInput.value) lookupLot();
 </script>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/barcode-scanner.js"></script>
 
 <%- include('_footer') %>

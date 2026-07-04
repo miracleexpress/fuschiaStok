@@ -55,6 +55,7 @@
       </label>
       <input type="text" id="lot_barcode" name="lot_barcode" required
              autofocus
+             data-barcode-scan
              placeholder="Jalpersan barkodunu okutun veya yazın"
              value="<%= formData.lot_barcode || '' %>"
              autocomplete="off"
@@ -171,5 +172,8 @@ productInput.addEventListener('input', () => {
   productInput.setSelectionRange(pos, pos);
 });
 </script>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/barcode-scanner.js"></script>
 
 <%- include('_footer') %>
