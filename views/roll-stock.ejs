@@ -51,11 +51,11 @@
   const evalTotals = renderStockTable(evalRows);
 %>
 
-<!-- REGÜLE DEPO -->
+<!-- DEĞERLENDİRME -->
 <div class="card mb-3">
-  <div class="card-title">&#128230; Regüle Depo (<%= regulationRows.length %>)</div>
-  <% if (!regulationRows.length) { %>
-  <div class="empty-state"><span class="es-icon">&#128230;</span>Regüle depoda stok kaydı bulunamadı.</div>
+  <div class="card-title">&#128195; Değerlendirme (<%= evalRows.length %>)</div>
+  <% if (!evalRows.length) { %>
+  <div class="empty-state"><span class="es-icon">&#128195;</span>Değerlendirme rafında stok kaydı bulunamadı.</div>
   <% } else { %>
   <div class="table-wrap resp-table">
     <table>
@@ -66,7 +66,7 @@
         </tr>
       </thead>
       <tbody>
-        <% regulationRows.forEach(r => { %>
+        <% evalRows.forEach(r => { %>
         <tr>
           <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
           <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
@@ -80,10 +80,10 @@
       </tbody>
       <tfoot>
         <tr class="tfoot-total">
-          <td colspan="4">TOPLAM (<%= regulationRows.length %> kayıt)</td>
-          <td class="text-success" style="text-align:right"><%= regTotals.totalIn.toFixed(2) %></td>
-          <td class="text-danger"  style="text-align:right"><%= regTotals.totalOut.toFixed(2) %></td>
-          <td class="fw-black"     style="text-align:right"><%= regTotals.totalRem.toFixed(2) %></td>
+          <td colspan="4">TOPLAM (<%= evalRows.length %> kayıt)</td>
+          <td class="text-success" style="text-align:right"><%= evalTotals.totalIn.toFixed(2) %></td>
+          <td class="text-danger"  style="text-align:right"><%= evalTotals.totalOut.toFixed(2) %></td>
+          <td class="fw-black"     style="text-align:right"><%= evalTotals.totalRem.toFixed(2) %></td>
         </tr>
       </tfoot>
     </table>
@@ -131,11 +131,11 @@
   <% } %>
 </div>
 
-<!-- DEĞERLENDİRME -->
+<!-- REGÜLE DEPO -->
 <div class="card mb-3">
-  <div class="card-title">&#128195; Değerlendirme (<%= evalRows.length %>)</div>
-  <% if (!evalRows.length) { %>
-  <div class="empty-state"><span class="es-icon">&#128195;</span>Değerlendirme rafında stok kaydı bulunamadı.</div>
+  <div class="card-title">&#128230; Regüle Depo (<%= regulationRows.length %>)</div>
+  <% if (!regulationRows.length) { %>
+  <div class="empty-state"><span class="es-icon">&#128230;</span>Regüle depoda stok kaydı bulunamadı.</div>
   <% } else { %>
   <div class="table-wrap resp-table">
     <table>
@@ -146,7 +146,7 @@
         </tr>
       </thead>
       <tbody>
-        <% evalRows.forEach(r => { %>
+        <% regulationRows.forEach(r => { %>
         <tr>
           <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
           <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
@@ -160,10 +160,10 @@
       </tbody>
       <tfoot>
         <tr class="tfoot-total">
-          <td colspan="4">TOPLAM (<%= evalRows.length %> kayıt)</td>
-          <td class="text-success" style="text-align:right"><%= evalTotals.totalIn.toFixed(2) %></td>
-          <td class="text-danger"  style="text-align:right"><%= evalTotals.totalOut.toFixed(2) %></td>
-          <td class="fw-black"     style="text-align:right"><%= evalTotals.totalRem.toFixed(2) %></td>
+          <td colspan="4">TOPLAM (<%= regulationRows.length %> kayıt)</td>
+          <td class="text-success" style="text-align:right"><%= regTotals.totalIn.toFixed(2) %></td>
+          <td class="text-danger"  style="text-align:right"><%= regTotals.totalOut.toFixed(2) %></td>
+          <td class="fw-black"     style="text-align:right"><%= regTotals.totalRem.toFixed(2) %></td>
         </tr>
       </tfoot>
     </table>
