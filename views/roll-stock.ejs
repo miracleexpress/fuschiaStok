@@ -17,6 +17,11 @@
              value="<%= filter.lot_barcode||'' %>">
     </div>
     <div class="form-group">
+      <label class="form-label">Ürün ID</label>
+      <input type="text" name="product_serial" data-barcode-scan placeholder="UR-..."
+             value="<%= filter.product_serial||'' %>">
+    </div>
+    <div class="form-group">
       <label class="form-label">Raf</label>
       <input type="text" name="shelf_code" placeholder="1-A"
              value="<%= filter.shelf_code||'' %>">
@@ -61,7 +66,7 @@
     <table>
       <thead>
         <tr>
-          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Raf</th>
+          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Ürün ID</th><th>Raf</th>
           <th style="text-align:right">Giriş (m)</th><th style="text-align:right">Çıkış (m)</th><th style="text-align:right">Kalan (m)</th>
         </tr>
       </thead>
@@ -71,6 +76,7 @@
           <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
           <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
           <td data-label="Lot" style="font-family:monospace;font-size:.88rem"><%= r.lot_barcode %></td>
+          <td data-label="Ürün ID" style="font-family:monospace;font-size:.85rem"><%= r.product_serial||'—' %></td>
           <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
           <td data-label="Giriş (m)"  class="text-success" style="text-align:right"><%= Number(r.total_in_meter).toFixed(2) %></td>
           <td data-label="Çıkış (m)"  class="text-danger"  style="text-align:right"><%= Number(r.total_out_meter).toFixed(2) %></td>
@@ -80,7 +86,7 @@
       </tbody>
       <tfoot>
         <tr class="tfoot-total">
-          <td colspan="4">TOPLAM (<%= evalRows.length %> kayıt)</td>
+          <td colspan="5">TOPLAM (<%= evalRows.length %> kayıt)</td>
           <td class="text-success" style="text-align:right"><%= evalTotals.totalIn.toFixed(2) %></td>
           <td class="text-danger"  style="text-align:right"><%= evalTotals.totalOut.toFixed(2) %></td>
           <td class="fw-black"     style="text-align:right"><%= evalTotals.totalRem.toFixed(2) %></td>
@@ -101,7 +107,7 @@
     <table>
       <thead>
         <tr>
-          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Raf</th>
+          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Ürün ID</th><th>Raf</th>
           <th style="text-align:right">Giriş (m)</th><th style="text-align:right">Çıkış (m)</th><th style="text-align:right">Kalan (m)</th>
         </tr>
       </thead>
@@ -111,6 +117,7 @@
           <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
           <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
           <td data-label="Lot" style="font-family:monospace;font-size:.88rem"><%= r.lot_barcode %></td>
+          <td data-label="Ürün ID" style="font-family:monospace;font-size:.85rem"><%= r.product_serial||'—' %></td>
           <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
           <td data-label="Giriş (m)"  class="text-success" style="text-align:right"><%= Number(r.total_in_meter).toFixed(2) %></td>
           <td data-label="Çıkış (m)"  class="text-danger"  style="text-align:right"><%= Number(r.total_out_meter).toFixed(2) %></td>
@@ -120,7 +127,7 @@
       </tbody>
       <tfoot>
         <tr class="tfoot-total">
-          <td colspan="4">TOPLAM (<%= mainRows.length %> kayıt)</td>
+          <td colspan="5">TOPLAM (<%= mainRows.length %> kayıt)</td>
           <td class="text-success" style="text-align:right"><%= mainTotals.totalIn.toFixed(2) %></td>
           <td class="text-danger"  style="text-align:right"><%= mainTotals.totalOut.toFixed(2) %></td>
           <td class="fw-black"     style="text-align:right"><%= mainTotals.totalRem.toFixed(2) %></td>
@@ -141,7 +148,7 @@
     <table>
       <thead>
         <tr>
-          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Raf</th>
+          <th>Ürün Kodu</th><th>Ürün Adı</th><th>Lot / Barkod</th><th>Ürün ID</th><th>Raf</th>
           <th style="text-align:right">Giriş (m)</th><th style="text-align:right">Çıkış (m)</th><th style="text-align:right">Kalan (m)</th>
         </tr>
       </thead>
@@ -151,6 +158,7 @@
           <td data-label="Ürün Kodu" class="fw-bold fs-lg"><%= r.product_code %></td>
           <td data-label="Ürün Adı"  class="text-muted fs-sm"><%= r.product_name||'—' %></td>
           <td data-label="Lot" style="font-family:monospace;font-size:.88rem"><%= r.lot_barcode %></td>
+          <td data-label="Ürün ID" style="font-family:monospace;font-size:.85rem"><%= r.product_serial||'—' %></td>
           <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
           <td data-label="Giriş (m)"  class="text-success" style="text-align:right"><%= Number(r.total_in_meter).toFixed(2) %></td>
           <td data-label="Çıkış (m)"  class="text-danger"  style="text-align:right"><%= Number(r.total_out_meter).toFixed(2) %></td>
@@ -160,7 +168,7 @@
       </tbody>
       <tfoot>
         <tr class="tfoot-total">
-          <td colspan="4">TOPLAM (<%= regulationRows.length %> kayıt)</td>
+          <td colspan="5">TOPLAM (<%= regulationRows.length %> kayıt)</td>
           <td class="text-success" style="text-align:right"><%= regTotals.totalIn.toFixed(2) %></td>
           <td class="text-danger"  style="text-align:right"><%= regTotals.totalOut.toFixed(2) %></td>
           <td class="fw-black"     style="text-align:right"><%= regTotals.totalRem.toFixed(2) %></td>

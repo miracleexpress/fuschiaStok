@@ -49,11 +49,11 @@
       </div>
     </div>
 
+    <div class="form-hint" style="margin-bottom:8px">Lot / Barkod No veya Ürün ID alanlarından <strong>en az biri</strong> girilmelidir.</div>
+
     <div class="form-group">
-      <label class="form-label" for="lot_barcode">
-        Lot / Barkod No <span class="req">*</span>
-      </label>
-      <input type="text" id="lot_barcode" name="lot_barcode" required
+      <label class="form-label" for="lot_barcode">Lot / Barkod No</label>
+      <input type="text" id="lot_barcode" name="lot_barcode"
              autofocus
              data-barcode-scan
              placeholder="Jalpersan barkodunu okutun veya yazın"
@@ -62,6 +62,18 @@
              inputmode="text"
              style="font-size:1.05rem;font-family:monospace">
       <div class="form-hint">Tedarikçi: Jalpersan — barkod okuyucuyla tarayabilirsiniz</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="product_serial">Ürün ID</label>
+      <input type="text" id="product_serial" name="product_serial"
+             data-barcode-scan
+             placeholder="Ürüne özel seri/ID no okutun veya yazın"
+             value="<%= formData.product_serial || '' %>"
+             autocomplete="off"
+             inputmode="text"
+             style="font-size:1.05rem;font-family:monospace">
+      <div class="form-hint">Lot/Barkod yoksa bu alan tek başına yeterlidir</div>
     </div>
 
     <div class="form-group">
@@ -108,7 +120,7 @@
     <table>
       <thead>
         <tr>
-          <th>Tarih</th><th>Ürün</th><th>Lot / Barkod</th>
+          <th>Tarih</th><th>Ürün</th><th>Lot / Barkod</th><th>Ürün ID</th>
           <th>Raf</th><th>Metre</th><th>Kaydeden</th>
         </tr>
       </thead>
@@ -118,6 +130,7 @@
           <td data-label="Tarih"><%= new Date(r.entry_date).toLocaleDateString('tr-TR') %></td>
           <td data-label="Ürün" class="fw-bold"><%= r.product_code %></td>
           <td data-label="Lot"  style="font-family:monospace;font-size:.9rem"><%= r.lot_barcode %></td>
+          <td data-label="Ürün ID" style="font-family:monospace;font-size:.9rem"><%= r.product_serial||'—' %></td>
           <td data-label="Raf"><span class="badge badge-gray"><%= r.shelf_code %></span></td>
           <td data-label="Metre" class="fw-bold text-success"><%= Number(r.entry_meter).toFixed(2) %> m</td>
           <td data-label="Kaydeden" class="fs-sm text-muted"><%= r.created_by %></td>
@@ -143,11 +156,16 @@
 
 const productInput = document.getElementById('product_code');
 const lotInput     = document.getElementById('lot_barcode');
+const serialInput  = document.getElementById('product_serial');
 const lotResult    = document.getElementById('lotCheckResult');
+
+function effectiveLot() {
+  return lotInput.value.trim() || serialInput.value.trim();
+}
 
 async function checkLot() {
   const pc  = productInput.value.trim();
-  const lot = lotInput.value.trim();
+  const lot = effectiveLot();
   if (!pc || !lot) { lotResult.style.display='none'; return; }
   try {
     const res  = await fetch(`/api/check-lot?product_code=${encodeURIComponent(pc)}&lot_barcode=${encodeURIComponent(lot)}`);
@@ -164,12 +182,22 @@ async function checkLot() {
 }
 
 lotInput.addEventListener('blur', checkLot);
-productInput.addEventListener('change', () => { if(lotInput.value) checkLot(); });
+serialInput.addEventListener('blur', checkLot);
+productInput.addEventListener('change', () => { if (effectiveLot()) checkLot(); });
 
 productInput.addEventListener('input', () => {
   const pos = productInput.selectionStart;
   productInput.value = productInput.value.toUpperCase();
   productInput.setSelectionRange(pos, pos);
+});
+
+document.getElementById('rollForm').addEventListener('submit', (e) => {
+  if (!effectiveLot()) {
+    e.preventDefault();
+    lotResult.style.display = 'block';
+    lotResult.innerHTML = '<div class="alert alert-danger" style="margin:0;padding:10px 14px"><span class="alert-icon">&#9888;</span> Lot / Barkod No veya Ürün ID alanlarından en az biri girilmelidir.</div>';
+    lotInput.focus();
+  }
 });
 </script>
 

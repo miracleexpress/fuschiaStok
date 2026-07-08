@@ -21,16 +21,25 @@ router.get('/lots', async (req, res) => {
   }
 });
 
-// GET /api/lot-lookup?lot_barcode=JAL-001
-// Lot barkoduna göre ürün kodu + stokta kalan raf kombinasyonları
-// Yanıt: { status: 'ok', product_code, shelves: [...] } veya { status: 'not_found' }
+// GET /api/lot-lookup?lot_barcode=JAL-001  veya  ?product_serial=UR-001
+// Lot barkoduna (ya da Ürün ID'ye) göre ürün kodu + stokta kalan raf kombinasyonları
+// Yanıt: { status: 'ok', lot_barcode, product_code, shelves: [...] } veya { status: 'not_found' }
 router.get('/lot-lookup', async (req, res) => {
-  const { lot_barcode, shelf_types } = req.query;
-  if (!lot_barcode) return res.json({ status: 'not_found' });
+  const { lot_barcode, product_serial, shelf_types } = req.query;
+  let lot = lot_barcode ? lot_barcode.trim() : '';
   const types = shelf_types
     ? shelf_types.split(',').map(t => t.trim()).filter(Boolean)
     : ['main', 'evaluation'];
   try {
+    if (!lot && product_serial) {
+      const serialRow = await pool.query(
+        'SELECT lot_barcode FROM roll_entries WHERE product_serial = $1 ORDER BY created_at DESC LIMIT 1',
+        [product_serial.trim()]
+      );
+      if (serialRow.rows.length) lot = serialRow.rows[0].lot_barcode;
+    }
+    if (!lot) return res.json({ status: 'not_found' });
+
     const { rows } = await pool.query(
       `SELECT
          p.product_code,
@@ -49,10 +58,10 @@ router.get('/lot-lookup', async (req, res) => {
        GROUP BY p.product_code, sh.id, sh.shelf_code, sh.shelf_type
        HAVING SUM(sm.meter) > 0
        ORDER BY sh.shelf_code`,
-      [lot_barcode.trim(), types]
+      [lot, types]
     );
     if (!rows.length) return res.json({ status: 'not_found' });
-    res.json({ status: 'ok', product_code: rows[0].product_code, shelves: rows });
+    res.json({ status: 'ok', lot_barcode: lot, product_code: rows[0].product_code, shelves: rows });
   } catch (err) {
     console.error('/api/lot-lookup hatası:', err);
     res.status(500).json({ error: 'Lot bilgisi alınamadı.' });

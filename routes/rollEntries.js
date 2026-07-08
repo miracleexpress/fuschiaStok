@@ -10,6 +10,7 @@ async function getRecentEntries(client) {
        re.entry_date,
        p.product_code,
        re.lot_barcode,
+       re.product_serial,
        re.entry_meter,
        sh.shelf_code,
        u.username AS created_by,
@@ -50,7 +51,7 @@ router.get('/', async (req, res) => {
 // POST /roll-entry
 router.post('/', async (req, res) => {
   const {
-    entry_date, product_code, lot_barcode,
+    entry_date, product_code, lot_barcode, product_serial,
     entry_meter, shelf_id, note,
   } = req.body;
 
@@ -73,15 +74,21 @@ router.post('/', async (req, res) => {
   };
 
   // ── Temel validasyon ──────────────────────────────────────────────────────
-  if (!entry_date || !product_code || !lot_barcode || !entry_meter || !shelf_id) {
+  if (!entry_date || !product_code || !entry_meter || !shelf_id) {
     return renderForm('Tüm zorunlu alanları doldurun.');
+  }
+  const rawLot    = (lot_barcode || '').trim();
+  const rawSerial = (product_serial || '').trim();
+  if (!rawLot && !rawSerial) {
+    return renderForm('Lot / Barkod No veya Ürün ID alanlarından en az biri girilmelidir.');
   }
   const meter = parseFloat(entry_meter);
   if (isNaN(meter) || meter <= 0) {
     return renderForm('Giriş metre 0\'dan büyük olmalıdır.');
   }
 
-  const cleanLot     = lot_barcode.trim();
+  const cleanLot     = rawLot || rawSerial; // stok takibi için kullanılan asıl anahtar
+  const cleanSerial  = rawSerial || null;
   const cleanProduct = product_code.trim().toUpperCase();
 
   const client = await pool.connect();
@@ -125,10 +132,10 @@ router.post('/', async (req, res) => {
     // ── Kayıt ─────────────────────────────────────────────────────────────
     const rollRes = await client.query(
       `INSERT INTO roll_entries
-         (entry_date, product_id, lot_barcode, entry_meter, shelf_id, supplier, note, created_by)
-       VALUES ($1,$2,$3,$4,$5,'Jalpersan',$6,$7)
+         (entry_date, product_id, lot_barcode, product_serial, entry_meter, shelf_id, supplier, note, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,'Jalpersan',$7,$8)
        RETURNING id`,
-      [entry_date, productId, cleanLot, meter, shelf_id, note || null, req.session.userId]
+      [entry_date, productId, cleanLot, cleanSerial, meter, shelf_id, note || null, req.session.userId]
     );
     const rollId = rollRes.rows[0].id;
 
@@ -143,7 +150,7 @@ router.post('/', async (req, res) => {
     await client.query(
       `INSERT INTO audit_logs (user_id, action, table_name, record_id, new_data)
        VALUES ($1,'INSERT','roll_entries',$2,$3)`,
-      [req.session.userId, rollId, JSON.stringify({ product_code: cleanProduct, lot_barcode: cleanLot, meter, shelf_id })]
+      [req.session.userId, rollId, JSON.stringify({ product_code: cleanProduct, lot_barcode: cleanLot, product_serial: cleanSerial, meter, shelf_id })]
     );
 
     await client.query('COMMIT');

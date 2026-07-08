@@ -34,6 +34,17 @@
       <div class="form-hint" id="lotHint">Lot barkodunu girin (ürün ve raf otomatik dolar) — ya da önce ürün kodunu yazıp mevcut lotlardan seçin.</div>
     </div>
 
+    <!-- ÜRÜN ID (Lot/Barkod'a alternatif arama) -->
+    <div class="form-group">
+      <label class="form-label" for="product_serial_input">Ürün ID <span class="fs-sm text-muted fw-bold">(Lot/Barkod bilinmiyorsa kullanın)</span></label>
+      <input type="text" id="product_serial_input"
+             data-barcode-scan
+             placeholder="Ürüne özel seri/ID no okutun veya yazın"
+             autocomplete="off"
+             inputmode="text"
+             style="font-size:1.05rem;font-family:monospace">
+    </div>
+
     <!-- ÜRÜN KODU / KAYNAK RAF -->
     <div class="form-row">
       <div class="form-group">
@@ -200,6 +211,7 @@ const lotHint      = document.getElementById('lotHint');
 const shelfTypeHint = document.getElementById('shelfTypeHint');
 const availableLotsGroup = document.getElementById('availableLotsGroup');
 const availableLotsList  = document.getElementById('availableLotsList');
+const serialInput  = document.getElementById('product_serial_input');
 
 let currentRemaining = 0;
 let shelvesData = [];
@@ -237,20 +249,38 @@ lotInput.addEventListener('blur', lookupLot);
 async function lookupLot() {
   const lot = lotInput.value.trim();
   if (!lot) { resetShelfOnly(); return; }
+  await runLotLookup('lot_barcode=' + encodeURIComponent(lot));
+}
+
+let serialTimer = null;
+serialInput.addEventListener('input', () => {
+  clearTimeout(serialTimer);
+  serialTimer = setTimeout(lookupBySerial, 500);
+});
+serialInput.addEventListener('blur', lookupBySerial);
+
+async function lookupBySerial() {
+  const serial = serialInput.value.trim();
+  if (!serial) return;
+  await runLotLookup('product_serial=' + encodeURIComponent(serial));
+}
+
+async function runLotLookup(queryString) {
   shelfSel.disabled = true;
   shelfSel.innerHTML = '<option value="">Yükleniyor... &#9203;</option>';
   resetRemaining();
   try {
-    const res  = await fetch('/api/lot-lookup?lot_barcode=' + encodeURIComponent(lot));
+    const res  = await fetch('/api/lot-lookup?' + queryString);
     const data = await res.json();
     if (data.status !== 'ok') {
-      shelfSel.innerHTML = '<option value="">Bu lot barkodu bulunamadı</option>';
+      shelfSel.innerHTML = '<option value="">Bulunamadı</option>';
       shelfSel.disabled = true;
-      lotHint.textContent = 'Bu lot barkodu stokta yok. Önce rulo girişi yapın.';
+      lotHint.textContent = 'Stokta bulunamadı. Lot barkodunu veya Ürün ID\'yi kontrol edin.';
       lotHint.style.color = '#b91c1c';
       updateSubmitState();
       return;
     }
+    lotInput.value = data.lot_barcode;
     productInput.value = data.product_code;
     shelvesData = data.shelves;
     shelfSel.innerHTML = '<option value="">— Raf Seç —</option>';

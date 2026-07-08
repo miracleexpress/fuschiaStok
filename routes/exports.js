@@ -32,9 +32,13 @@ function fmtMeter(v) {
 
 // GET /reports/rulo-stok.csv
 router.get('/rulo-stok.csv', async (req, res) => {
-  const { product_code, lot_barcode, shelf_code } = req.query;
+  const { product_code, lot_barcode, product_serial, shelf_code } = req.query;
   let sql = `
-    SELECT p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.shelf_type,
+    SELECT p.product_code, p.name, sm.lot_barcode,
+      (SELECT STRING_AGG(DISTINCT re.product_serial, ', ')
+       FROM roll_entries re
+       WHERE re.lot_barcode = sm.lot_barcode AND re.product_id = p.id) AS product_serial,
+      sh.shelf_code, sh.shelf_type,
       SUM(CASE WHEN sm.meter > 0 THEN sm.meter      ELSE 0 END)::NUMERIC(12,2) AS total_in,
       SUM(CASE WHEN sm.meter < 0 THEN ABS(sm.meter) ELSE 0 END)::NUMERIC(12,2) AS total_out,
       SUM(sm.meter)::NUMERIC(12,2) AS remaining
@@ -49,15 +53,16 @@ router.get('/rulo-stok.csv', async (req, res) => {
   const params = [];
   if (product_code) { params.push(`%${product_code}%`); sql += ` AND p.product_code ILIKE $${params.length}`; }
   if (lot_barcode)  { params.push(`%${lot_barcode}%`);  sql += ` AND sm.lot_barcode ILIKE $${params.length}`; }
+  if (product_serial) { params.push(`%${product_serial}%`); sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = sm.lot_barcode AND re.product_serial ILIKE $${params.length})`; }
   if (shelf_code)   { params.push(`%${shelf_code}%`);   sql += ` AND sh.shelf_code ILIKE $${params.length}`; }
-  sql += ` GROUP BY p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.shelf_type
+  sql += ` GROUP BY p.id, p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.shelf_type
            HAVING SUM(sm.meter) > 0 ORDER BY p.product_code, sm.lot_barcode, sh.shelf_code`;
   try {
     const { rows } = await pool.query(sql, params);
     const csv = buildCSV(
-      ['Ürün Kodu','Ürün Adı','Lot / Barkod','Raf','Raf Tipi','Giriş (m)','Çıkış (m)','Kalan (m)'],
+      ['Ürün Kodu','Ürün Adı','Lot / Barkod','Ürün ID','Raf','Raf Tipi','Giriş (m)','Çıkış (m)','Kalan (m)'],
       rows.map(r => [
-        r.product_code, r.name || '', r.lot_barcode, r.shelf_code,
+        r.product_code, r.name || '', r.lot_barcode, r.product_serial || '', r.shelf_code,
         r.shelf_type === 'evaluation' ? 'Değerlendirme' : r.shelf_type === 'regulation' ? 'Regüle Depo' : 'Merkez Depo',
         fmtMeter(r.total_in), fmtMeter(r.total_out), fmtMeter(r.remaining),
       ])
@@ -111,7 +116,7 @@ router.get('/degerlendirme.csv', async (req, res) => {
 
 // GET /reports/fire.csv
 router.get('/fire.csv', async (req, res) => {
-  const { product_code, lot_barcode, date_from, date_to } = req.query;
+  const { product_code, lot_barcode, product_serial, date_from, date_to } = req.query;
   let sql = `
     SELECT ce.entry_date, p.product_code, p.name, ce.lot_barcode,
            s.shelf_code, ce.cut_cm, ce.quantity, ce.total_meter, ce.note
@@ -123,6 +128,7 @@ router.get('/fire.csv', async (req, res) => {
   const params = [];
   if (product_code) { params.push(`%${product_code}%`); sql += ` AND p.product_code ILIKE $${params.length}`; }
   if (lot_barcode)  { params.push(`%${lot_barcode}%`);  sql += ` AND ce.lot_barcode ILIKE $${params.length}`; }
+  if (product_serial) { params.push(`%${product_serial}%`); sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = ce.lot_barcode AND re.product_serial ILIKE $${params.length})`; }
   if (date_from)    { params.push(date_from);            sql += ` AND ce.entry_date >= $${params.length}`; }
   if (date_to)      { params.push(date_to);              sql += ` AND ce.entry_date <= $${params.length}`; }
   sql += ' ORDER BY ce.entry_date DESC, ce.id DESC';
@@ -146,7 +152,7 @@ router.get('/fire.csv', async (req, res) => {
 
 // GET /reports/satis.csv
 router.get('/satis.csv', async (req, res) => {
-  const { product_code, lot_barcode, date_from, date_to } = req.query;
+  const { product_code, lot_barcode, product_serial, date_from, date_to } = req.query;
   let sql = `
     SELECT ce.entry_date, p.product_code, p.name, ce.lot_barcode,
            s.shelf_code, ce.cut_cm, ce.quantity, ce.total_meter, ce.note
@@ -158,6 +164,7 @@ router.get('/satis.csv', async (req, res) => {
   const params = [];
   if (product_code) { params.push(`%${product_code}%`); sql += ` AND p.product_code ILIKE $${params.length}`; }
   if (lot_barcode)  { params.push(`%${lot_barcode}%`);  sql += ` AND ce.lot_barcode ILIKE $${params.length}`; }
+  if (product_serial) { params.push(`%${product_serial}%`); sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = ce.lot_barcode AND re.product_serial ILIKE $${params.length})`; }
   if (date_from)    { params.push(date_from);            sql += ` AND ce.entry_date >= $${params.length}`; }
   if (date_to)      { params.push(date_to);              sql += ` AND ce.entry_date <= $${params.length}`; }
   sql += ' ORDER BY ce.entry_date DESC, ce.id DESC';
@@ -181,7 +188,7 @@ router.get('/satis.csv', async (req, res) => {
 
 // GET /reports/hareketler.csv
 router.get('/hareketler.csv', async (req, res) => {
-  const { product_code, lot_barcode, movement_type, date_from, date_to } = req.query;
+  const { product_code, lot_barcode, product_serial, movement_type, date_from, date_to } = req.query;
   let sql = `
     SELECT sm.movement_date, sm.movement_type, p.product_code, p.name,
            sm.lot_barcode, src.shelf_code AS source_shelf, tgt.shelf_code AS target_shelf,
@@ -196,6 +203,7 @@ router.get('/hareketler.csv', async (req, res) => {
   const params = [];
   if (product_code)  { params.push(`%${product_code}%`);  sql += ` AND p.product_code ILIKE $${params.length}`; }
   if (lot_barcode)   { params.push(`%${lot_barcode}%`);   sql += ` AND sm.lot_barcode ILIKE $${params.length}`; }
+  if (product_serial) { params.push(`%${product_serial}%`); sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = sm.lot_barcode AND re.product_serial ILIKE $${params.length})`; }
   if (movement_type) { params.push(movement_type);         sql += ` AND sm.movement_type = $${params.length}`; }
   if (date_from)     { params.push(date_from);             sql += ` AND sm.movement_date >= $${params.length}`; }
   if (date_to)       { params.push(date_to);               sql += ` AND sm.movement_date <= $${params.length}`; }

@@ -14,13 +14,16 @@ async function getUserList() {
 // ── Rulo Stok ─────────────────────────────────────────────────────────────
 router.get('/roll-stock', async (req, res) => {
   try {
-    const { product_code, lot_barcode, shelf_code, sort } = req.query;
+    const { product_code, lot_barcode, product_serial, shelf_code, sort } = req.query;
 
     let sql = `
       SELECT
         p.product_code,
         p.name AS product_name,
         sm.lot_barcode,
+        (SELECT STRING_AGG(DISTINCT re.product_serial, ', ')
+         FROM roll_entries re
+         WHERE re.lot_barcode = sm.lot_barcode AND re.product_id = p.id) AS product_serial,
         sh.shelf_code,
         sh.id AS shelf_id,
         sh.shelf_type,
@@ -45,13 +48,17 @@ router.get('/roll-stock', async (req, res) => {
       params.push('%' + lot_barcode.trim() + '%');
       sql += ` AND sm.lot_barcode ILIKE $${params.length}`;
     }
+    if (product_serial) {
+      params.push('%' + product_serial.trim() + '%');
+      sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = sm.lot_barcode AND re.product_serial ILIKE $${params.length})`;
+    }
     if (shelf_code) {
       params.push('%' + shelf_code.trim() + '%');
       sql += ` AND sh.shelf_code ILIKE $${params.length}`;
     }
 
     sql += `
-      GROUP BY p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.id, sh.shelf_type
+      GROUP BY p.id, p.product_code, p.name, sm.lot_barcode, sh.shelf_code, sh.id, sh.shelf_type
       HAVING SUM(sm.meter) > 0
     `;
 
@@ -113,7 +120,7 @@ router.get('/eval-stock', async (req, res) => {
 // ── Fire Raporu ───────────────────────────────────────────────────────────
 router.get('/fire', async (req, res) => {
   try {
-    const { date_from, date_to, product_code, lot_barcode, username } = req.query;
+    const { date_from, date_to, product_code, lot_barcode, product_serial, username } = req.query;
     const params = [];
     let sql = 'SELECT * FROM v_fire_report WHERE 1=1';
 
@@ -126,6 +133,10 @@ router.get('/fire', async (req, res) => {
     if (lot_barcode) {
       params.push('%' + lot_barcode.trim() + '%');
       sql += ` AND lot_barcode ILIKE $${params.length}`;
+    }
+    if (product_serial) {
+      params.push('%' + product_serial.trim() + '%');
+      sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = v_fire_report.lot_barcode AND re.product_serial ILIKE $${params.length})`;
     }
     if (username) {
       params.push(username.trim());
@@ -145,6 +156,7 @@ router.get('/fire', async (req, res) => {
     if (date_to)      { totalParams.push(date_to);   totalSql += ` AND ce.entry_date <= $${totalParams.length}`; }
     if (product_code) { totalParams.push('%' + product_code.trim() + '%'); totalSql += ` AND p.product_code ILIKE $${totalParams.length}`; }
     if (lot_barcode)  { totalParams.push('%' + lot_barcode.trim() + '%'); totalSql += ` AND ce.lot_barcode ILIKE $${totalParams.length}`; }
+    if (product_serial) { totalParams.push('%' + product_serial.trim() + '%'); totalSql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = ce.lot_barcode AND re.product_serial ILIKE $${totalParams.length})`; }
     if (username)     { totalParams.push(username.trim()); totalSql += ` AND u.username = $${totalParams.length}`; }
 
     const [result, totals, overall, users] = await Promise.all([
@@ -176,7 +188,7 @@ router.get('/fire', async (req, res) => {
 // ── Satış Raporu ──────────────────────────────────────────────────────────
 router.get('/sales', async (req, res) => {
   try {
-    const { date_from, date_to, product_code, lot_barcode, username } = req.query;
+    const { date_from, date_to, product_code, lot_barcode, product_serial, username } = req.query;
     const params = [];
     let sql = 'SELECT * FROM v_sales_report WHERE 1=1';
 
@@ -184,6 +196,7 @@ router.get('/sales', async (req, res) => {
     if (date_to)   { params.push(date_to);   sql += ` AND entry_date <= $${params.length}`; }
     if (product_code) { params.push('%' + product_code.trim() + '%'); sql += ` AND product_code ILIKE $${params.length}`; }
     if (lot_barcode)  { params.push('%' + lot_barcode.trim() + '%'); sql += ` AND lot_barcode ILIKE $${params.length}`; }
+    if (product_serial) { params.push('%' + product_serial.trim() + '%'); sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = v_sales_report.lot_barcode AND re.product_serial ILIKE $${params.length})`; }
     if (username)     { params.push(username.trim()); sql += ` AND created_by = $${params.length}`; }
 
     let totalSql = `
@@ -198,6 +211,7 @@ router.get('/sales', async (req, res) => {
     if (date_to)      { totalParams.push(date_to);   totalSql += ` AND ce.entry_date <= $${totalParams.length}`; }
     if (product_code) { totalParams.push('%' + product_code.trim() + '%'); totalSql += ` AND p.product_code ILIKE $${totalParams.length}`; }
     if (lot_barcode)  { totalParams.push('%' + lot_barcode.trim() + '%'); totalSql += ` AND ce.lot_barcode ILIKE $${totalParams.length}`; }
+    if (product_serial) { totalParams.push('%' + product_serial.trim() + '%'); totalSql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = ce.lot_barcode AND re.product_serial ILIKE $${totalParams.length})`; }
     if (username)     { totalParams.push(username.trim()); totalSql += ` AND u.username = $${totalParams.length}`; }
 
     const [result, totals, users] = await Promise.all([
@@ -223,7 +237,7 @@ router.get('/sales', async (req, res) => {
 // ── Tüm Hareketler ────────────────────────────────────────────────────────
 router.get('/movements', async (req, res) => {
   try {
-    const { date_from, date_to, movement_type, product_code, lot_barcode, username } = req.query;
+    const { date_from, date_to, movement_type, product_code, lot_barcode, product_serial, username } = req.query;
     const params = [];
     let sql = `
       SELECT
@@ -248,6 +262,10 @@ router.get('/movements', async (req, res) => {
     }
     if (product_code) { params.push('%' + product_code.trim() + '%'); sql += ` AND p.product_code ILIKE $${params.length}`; }
     if (lot_barcode)  { params.push('%' + lot_barcode.trim() + '%'); sql += ` AND sm.lot_barcode ILIKE $${params.length}`; }
+    if (product_serial) {
+      params.push('%' + product_serial.trim() + '%');
+      sql += ` AND EXISTS (SELECT 1 FROM roll_entries re WHERE re.lot_barcode = sm.lot_barcode AND re.product_serial ILIKE $${params.length})`;
+    }
     if (username)     { params.push(username.trim()); sql += ` AND u.username = $${params.length}`; }
 
     sql += ' ORDER BY sm.movement_date DESC, sm.created_at DESC LIMIT 200';

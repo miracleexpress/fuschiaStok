@@ -51,16 +51,17 @@ CREATE TABLE shelves (
 -- 4. RULO GİRİŞLERİ
 -- ─────────────────────────────────────────────
 CREATE TABLE roll_entries (
-  id           SERIAL PRIMARY KEY,
-  entry_date   DATE          NOT NULL DEFAULT CURRENT_DATE,
-  product_id   INTEGER       NOT NULL REFERENCES products(id),
-  lot_barcode  VARCHAR(100)  NOT NULL,
-  entry_meter  NUMERIC(12,2) NOT NULL CHECK (entry_meter > 0),
-  shelf_id     INTEGER       NOT NULL REFERENCES shelves(id),
-  supplier     VARCHAR(100)  NOT NULL DEFAULT 'Jalpersan',
-  note         TEXT,
-  created_by   INTEGER       NOT NULL REFERENCES users(id),
-  created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+  id             SERIAL PRIMARY KEY,
+  entry_date     DATE          NOT NULL DEFAULT CURRENT_DATE,
+  product_id     INTEGER       NOT NULL REFERENCES products(id),
+  lot_barcode    VARCHAR(100)  NOT NULL,
+  product_serial VARCHAR(100),
+  entry_meter    NUMERIC(12,2) NOT NULL CHECK (entry_meter > 0),
+  shelf_id       INTEGER       NOT NULL REFERENCES shelves(id),
+  supplier       VARCHAR(100)  NOT NULL DEFAULT 'Jalpersan',
+  note           TEXT,
+  created_by     INTEGER       NOT NULL REFERENCES users(id),
+  created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
 -- ─────────────────────────────────────────────
@@ -174,6 +175,7 @@ CREATE TABLE audit_logs (
 -- ─────────────────────────────────────────────
 CREATE INDEX idx_roll_entries_product ON roll_entries(product_id);
 CREATE INDEX idx_roll_entries_lot     ON roll_entries(lot_barcode);
+CREATE INDEX idx_roll_entries_serial  ON roll_entries(product_serial);
 CREATE INDEX idx_roll_entries_shelf   ON roll_entries(shelf_id);
 CREATE INDEX idx_cutting_product      ON cutting_entries(product_id);
 CREATE INDEX idx_cutting_lot          ON cutting_entries(lot_barcode);

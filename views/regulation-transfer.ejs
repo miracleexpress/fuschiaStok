@@ -35,6 +35,17 @@
       <div class="form-hint" id="lotHint">Lot barkodunu girin — ürün kodu ve regüle depo rafı otomatik dolacak.</div>
     </div>
 
+    <!-- ÜRÜN ID (Lot/Barkod'a alternatif arama) -->
+    <div class="form-group">
+      <label class="form-label" for="product_serial_input">Ürün ID <span class="fs-sm text-muted fw-bold">(Lot/Barkod bilinmiyorsa kullanın)</span></label>
+      <input type="text" id="product_serial_input"
+             data-barcode-scan
+             placeholder="Ürüne özel seri/ID no okutun veya yazın"
+             autocomplete="off"
+             inputmode="text"
+             style="font-size:1.05rem;font-family:monospace">
+    </div>
+
     <!-- ÜRÜN KODU / KAYNAK RAF (otomatik doldurulur) -->
     <div class="form-row">
       <div class="form-group">
@@ -143,6 +154,7 @@ const targetSel    = document.getElementById('target_shelf_id');
 const meterInput   = document.getElementById('meter');
 const submitBtn    = document.getElementById('submitBtn');
 const lotHint      = document.getElementById('lotHint');
+const serialInput  = document.getElementById('product_serial_input');
 
 let currentRemaining = 0;
 
@@ -156,20 +168,38 @@ lotInput.addEventListener('blur', lookupLot);
 async function lookupLot() {
   const lot = lotInput.value.trim();
   if (!lot) { resetAll(); return; }
+  await runLotLookup('lot_barcode=' + encodeURIComponent(lot));
+}
+
+let serialTimer = null;
+serialInput.addEventListener('input', () => {
+  clearTimeout(serialTimer);
+  serialTimer = setTimeout(lookupBySerial, 500);
+});
+serialInput.addEventListener('blur', lookupBySerial);
+
+async function lookupBySerial() {
+  const serial = serialInput.value.trim();
+  if (!serial) return;
+  await runLotLookup('product_serial=' + encodeURIComponent(serial));
+}
+
+async function runLotLookup(queryString) {
   shelfSel.disabled = true;
   shelfSel.innerHTML = '<option value="">Yükleniyor... &#9203;</option>';
   resetRemaining();
   try {
-    const res  = await fetch('/api/lot-lookup?shelf_types=regulation&lot_barcode=' + encodeURIComponent(lot));
+    const res  = await fetch('/api/lot-lookup?shelf_types=regulation&' + queryString);
     const data = await res.json();
     if (data.status !== 'ok') {
       productInput.value = '';
-      shelfSel.innerHTML = '<option value="">Regüle depoda bu lot bulunamadı</option>';
-      lotHint.textContent = 'Bu lot regüle depoda yok. Önce Rulo Girişi yapın ya da lot kodunu kontrol edin.';
+      shelfSel.innerHTML = '<option value="">Regüle depoda bulunamadı</option>';
+      lotHint.textContent = 'Regüle depoda bulunamadı. Lot barkodunu veya Ürün ID\'yi kontrol edin.';
       lotHint.style.color = '#b91c1c';
       updateSubmitState();
       return;
     }
+    lotInput.value = data.lot_barcode;
     productInput.value = data.product_code;
     shelfSel.innerHTML = '<option value="">— Raf Seç —</option>';
     data.shelves.forEach(s => {
